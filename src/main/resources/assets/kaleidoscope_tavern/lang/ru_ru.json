@@ -167,5 +167,6 @@
   "kaleidoscope_tavern.ponder.grapevine_planting.text_5": "Когда виноград созреет, сбор урожая пустой рукой даст 1-2 виноградины.",
   "kaleidoscope_tavern.ponder.grapevine_planting.text_6": "Сбор урожая ножницами даст 2-3 виноградины.",
   "kaleidoscope_tavern.ponder.tag.brewing": "Виноделие",
-  "kaleidoscope_tavern.ponder.tag.brewing.description": "Всё, что нужно знать, чтобы начать варить с нуля."
+  "kaleidoscope_tavern.ponder.tag.brewing.description": "Всё, что нужно знать, чтобы начать варить с нуля.",
+  "config.jade.plugin_kaleidoscope_tavern.potion_bottle": "Potion bottle icon"
 }

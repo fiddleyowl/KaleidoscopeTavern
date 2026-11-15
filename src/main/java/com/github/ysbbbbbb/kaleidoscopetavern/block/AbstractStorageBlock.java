@@ -1,5 +1,8 @@
 package com.github.ysbbbbbb.kaleidoscopetavern.block;
 
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.Identifier;
 import com.github.ysbbbbbb.kaleidoscopetavern.block.brew.BottleBlock;
 import com.github.ysbbbbbb.kaleidoscopetavern.blockentity.deco.StorageBlockEntity;
 import com.github.ysbbbbbb.kaleidoscopetavern.entity.ThrownMolotovEntity;
@@ -37,7 +40,7 @@ import net.minecraft.world.level.storage.loot.LootParams;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.items.ItemStackHandler;
+import net.neoforged.neoforge.items.ItemStackHandler;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
@@ -50,8 +53,8 @@ public abstract class AbstractStorageBlock extends HorizontalDirectionalBlock im
         super(properties);
     }
 
-    public AbstractStorageBlock() {
-        super(Properties.of()
+    public AbstractStorageBlock(Identifier id) {
+        super(Properties.of().setId(ResourceKey.create(Registries.BLOCK, id))
                 .mapColor(MapColor.WOOD)
                 .strength(2.5F)
                 .sound(SoundType.WOOD)
@@ -108,19 +111,19 @@ public abstract class AbstractStorageBlock extends HorizontalDirectionalBlock im
             InteractionHand hand, BlockHitResult hitResult
     ) {
         if (hand != InteractionHand.MAIN_HAND) {
-            return InteractionResult.PASS;
+            return InteractionResult.TRY_WITH_EMPTY_HAND;
         }
 
         BlockEntity blockEntity = level.getBlockEntity(pos);
         if (!(blockEntity instanceof StorageBlockEntity storage)) {
-            return InteractionResult.PASS;
+            return InteractionResult.TRY_WITH_EMPTY_HAND;
         }
 
         ItemStack handItem = player.getItemInHand(hand);
         int clickedSlot = this.getClickedSlot(state.getValue(FACING), pos, hitResult);
 
         if (clickedSlot == -1) {
-            return InteractionResult.FAIL;
+            return InteractionResult.TRY_WITH_EMPTY_HAND;
         }
         if (handItem.isEmpty()) {
             return takeOut(level, pos, player, hand, storage, clickedSlot);
@@ -154,7 +157,7 @@ public abstract class AbstractStorageBlock extends HorizontalDirectionalBlock im
             return InteractionResult.SUCCESS;
         }
 
-        return InteractionResult.PASS;
+        return InteractionResult.TRY_WITH_EMPTY_HAND;
     }
 
     protected static InteractionResult takeOut(
@@ -173,7 +176,7 @@ public abstract class AbstractStorageBlock extends HorizontalDirectionalBlock im
             return InteractionResult.SUCCESS;
         }
 
-        return InteractionResult.PASS;
+        return InteractionResult.TRY_WITH_EMPTY_HAND;
     }
 
     @Nullable
@@ -192,7 +195,7 @@ public abstract class AbstractStorageBlock extends HorizontalDirectionalBlock im
     }
 
     @Override
-    public void neighborChanged(BlockState state, Level level, BlockPos pos, Block block, BlockPos fromPos, boolean isMoving) {
+    public void neighborChanged(BlockState state, Level level, BlockPos pos, Block block, net.minecraft.world.level.redstone.Orientation orientation, boolean isMoving) {
         boolean powered = level.hasNeighborSignal(pos);
         boolean wasPowered = state.getValue(POWERED);
         if (powered && !wasPowered) {
@@ -204,7 +207,7 @@ public abstract class AbstractStorageBlock extends HorizontalDirectionalBlock im
     }
 
     protected void popBottle(Level level, BlockPos pos, BlockState state) {
-        if (level.isClientSide || !(level.getBlockEntity(pos) instanceof StorageBlockEntity storage)) {
+        if (level.isClientSide() || !(level.getBlockEntity(pos) instanceof StorageBlockEntity storage)) {
             return;
         }
 
@@ -222,7 +225,7 @@ public abstract class AbstractStorageBlock extends HorizontalDirectionalBlock im
         }
 
         // 随机选择一个
-        int randomIndex = level.random.nextInt(slots.size());
+        int randomIndex = level.getRandom().nextInt(slots.size());
         int slot = slots.getInt(randomIndex);
         ItemStack stack = items.getStackInSlot(slot);
 
@@ -235,7 +238,7 @@ public abstract class AbstractStorageBlock extends HorizontalDirectionalBlock im
             Vec3 shootPos = this.getShootPos(direction, pos, slot);
             Vec3 movement = this.getMovement(direction, pos, slot);
 
-            drink.makeThrownPotion(level, shootPos.x(), shootPos.y(), shootPos.z(), brewLevel, null, movement);
+            drink.makeThrownPotion((net.minecraft.server.level.ServerLevel) level, shootPos.x(), shootPos.y(), shootPos.z(), brewLevel, null, movement);
             level.playSound(null, pos, ModSounds.HOLDER_POP.get(), SoundSource.BLOCKS, 0.9F, 1.0F);
             return;
         }

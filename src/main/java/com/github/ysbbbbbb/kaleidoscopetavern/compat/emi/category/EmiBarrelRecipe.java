@@ -11,23 +11,23 @@ import dev.emi.emi.api.recipe.EmiRecipeCategory;
 import dev.emi.emi.api.stack.EmiIngredient;
 import dev.emi.emi.api.stack.EmiStack;
 import dev.emi.emi.api.widget.WidgetHolder;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.crafting.Ingredient;
 
 import java.util.List;
 
 public class EmiBarrelRecipe extends BasicEmiRecipe {
     public static final EmiRecipeCategory CATEGORY = new EmiRecipeCategory(
-            new ResourceLocation(ModRecipes.BARREL_RECIPE.toString()),
+            Identifier.parse(ModRecipes.BARREL_RECIPE.toString()),
             EmiIngredient.of(Ingredient.of(ModItems.BARREL.get()))
     );
 
-    private static final ResourceLocation BG = KaleidoscopeTavern.modLoc("textures/gui/jei/barrel.png");
+    private static final Identifier BG = KaleidoscopeTavern.modLoc("textures/gui/jei/barrel.png");
 
     public static final int WIDTH = 180;
     public static final int HEIGHT = 150;
 
-    public EmiBarrelRecipe(ResourceLocation id, List<EmiIngredient> inputs, List<EmiStack> outputs, List<EmiIngredient> catalysts) {
+    public EmiBarrelRecipe(Identifier id, List<EmiIngredient> inputs, List<EmiStack> outputs, List<EmiIngredient> catalysts) {
         super(CATEGORY, id, WIDTH, HEIGHT);
         this.inputs = inputs;
         this.outputs = outputs;
@@ -38,7 +38,8 @@ public class EmiBarrelRecipe extends BasicEmiRecipe {
         registry.addCategory(CATEGORY);
         registry.addWorkstation(CATEGORY, EmiStack.of(ModItems.BARREL.get()));
 
-        registry.getRecipeManager().getAllRecipesFor(ModRecipes.BARREL_RECIPE).forEach(recipe -> {
+        registry.getRecipeManager().getAllRecipesFor(ModRecipes.BARREL_RECIPE).forEach(holder -> {
+            var recipe = holder.value();
             List<EmiIngredient> inputs = Lists.newArrayList();
             inputs.add(0, EmiStack.of(recipe.fluid().getBucket(), 4));
             recipe.getIngredients().stream().map(i -> EmiIngredient.of(i, 16)).forEach(inputs::add);
@@ -46,7 +47,7 @@ public class EmiBarrelRecipe extends BasicEmiRecipe {
             List<EmiStack> outputs = List.of(EmiStack.of(recipe.result(), 16));
             List<EmiIngredient> catalysts = List.of(EmiIngredient.of(recipe.carrier()));
 
-            registry.addRecipe(new EmiBarrelRecipe(recipe.getId(), inputs, outputs, catalysts));
+            registry.addRecipe(new EmiBarrelRecipe(holder.id(), inputs, outputs, catalysts));
         });
     }
 
@@ -65,11 +66,11 @@ public class EmiBarrelRecipe extends BasicEmiRecipe {
         }
 
         if (!catalysts.isEmpty()) {
-            widgets.addSlot(catalysts.get(0), 84, 117)
+            widgets.addSlot(catalysts.getFirst(), 84, 117)
                     .drawBack(false);
         }
 
-        widgets.addSlot(outputs.get(0), 148, 82)
+        widgets.addSlot(outputs.getFirst(), 148, 82)
                 .recipeContext(this)
                 .large(true);
     }

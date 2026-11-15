@@ -1,33 +1,34 @@
 package com.github.ysbbbbbb.kaleidoscopetavern.item;
 
+import net.minecraft.world.item.component.TooltipDisplay;
+import net.minecraft.resources.Identifier;
 import com.github.ysbbbbbb.kaleidoscopetavern.datamap.data.DrinkEffectData;
-import com.github.ysbbbbbb.kaleidoscopetavern.datamap.resources.DrinkEffectDataReloadListener;
+import com.github.ysbbbbbb.kaleidoscopetavern.datamap.DrinkEffectResolver;
 import com.github.ysbbbbbb.kaleidoscopetavern.init.ModItems;
 import com.google.common.collect.Lists;
 import net.minecraft.advancements.CriteriaTriggers;
+import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.stats.Stats;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.*;
-import net.minecraft.world.item.alchemy.PotionUtils;
+import net.minecraft.world.item.alchemy.PotionContents;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
 public class CocktailBlockItem extends GlasswareBlockItem implements IHasContainer {
-    public CocktailBlockItem(Block block) {
-        super(block);
+    public CocktailBlockItem(Identifier id, Block block) {
+        super(id, block);
     }
 
     public CocktailBlockItem(Block block, Properties properties) {
@@ -35,13 +36,13 @@ public class CocktailBlockItem extends GlasswareBlockItem implements IHasContain
     }
 
     @Override
-    public int getUseDuration(ItemStack stack) {
+    public int getUseDuration(ItemStack stack, LivingEntity entity) {
         return 32;
     }
 
     @Override
-    public UseAnim getUseAnimation(ItemStack stack) {
-        return UseAnim.DRINK;
+    public ItemUseAnimation getUseAnimation(ItemStack stack) {
+        return ItemUseAnimation.DRINK;
     }
 
     @Override
@@ -55,12 +56,12 @@ public class CocktailBlockItem extends GlasswareBlockItem implements IHasContain
 
         // 否则尝试喝下去
         Level level = context.getLevel();
-        InteractionResult result = this.use(level, player, context.getHand()).getResult();
-        return result == InteractionResult.CONSUME ? InteractionResult.CONSUME_PARTIAL : result;
+        InteractionResult result = this.use(level, player, context.getHand());
+        return result;
     }
 
     @Override
-    public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
+    public InteractionResult use(Level level, Player player, InteractionHand hand) {
         return ItemUtils.startUsingInstantly(level, player, hand);
     }
 
@@ -78,26 +79,18 @@ public class CocktailBlockItem extends GlasswareBlockItem implements IHasContain
     }
 
     protected void addDrinkEffect(ItemStack drink, Level level, LivingEntity entity) {
-        DrinkEffectData effectData = DrinkEffectDataReloadListener.INSTANCE.get(drink.getItem());
-        if (effectData == null) {
-            return;
-        }
-        var effects = effectData.effects();
-        if (effects.isEmpty()) {
-            return;
-        }
-        // 鸡尾酒没有酿造等级，直接取第一层效果
-        for (DrinkEffectData.Entry entry : effects.get(0)) {
-            if (!level.isClientSide && level.random.nextFloat() < entry.probability()) {
-                MobEffect effect = entry.effect();
+        var effects = DrinkEffectResolver.entriesFor(level.registryAccess(), drink, 0);
+        for (DrinkEffectData.Entry entry : effects) {
+            if (!level.isClientSide() && level.getRandom().nextFloat() < entry.probability()) {
+                MobEffect effect = entry.effect().value();
                 int amplifier = entry.amplifier();
                 if (effect.isInstantenous()) {
                     // 瞬时效果直接触发，不通过 addEffect
-                    effect.applyInstantenousEffect(entity, entity, entity, amplifier, 1.0);
+                    effect.applyInstantenousEffect((net.minecraft.server.level.ServerLevel) level, entity, entity, entity, amplifier, 1.0);
                 } else {
                     // json 里的持续时间是秒，但是内部游戏是 tick，需要转化
                     int duration = entry.duration() * 20;
-                    MobEffectInstance instance = new MobEffectInstance(effect, duration, amplifier);
+                    MobEffectInstance instance = new MobEffectInstance(entry.effect(), duration, amplifier);
                     entity.addEffect(instance);
                 }
             }
@@ -105,24 +98,21 @@ public class CocktailBlockItem extends GlasswareBlockItem implements IHasContain
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> tooltip, TooltipFlag flag) {
-        DrinkEffectData effectData = DrinkEffectDataReloadListener.INSTANCE.get(stack.getItem());
-        if (effectData == null || effectData.effects().isEmpty()) {
-            return;
-        }
-
+    public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay display, java.util.function.Consumer<Component> tooltip, TooltipFlag flag) {
+        if (context.registries() == null) return;
+        var effectData = DrinkEffectResolver.entriesFor(context.registries(), stack, 0);
         List<MobEffectInstance> effectsShow = Lists.newArrayList();
-        for (DrinkEffectData.Entry entry : effectData.effects().get(0)) {
+        for (DrinkEffectData.Entry entry : effectData) {
             if (entry.probability() >= 1.0F) {
-                MobEffect effect = entry.effect();
                 int duration = entry.duration() * 20;
                 int amplifier = entry.amplifier();
-                effectsShow.add(new MobEffectInstance(effect, duration, amplifier));
+                effectsShow.add(new MobEffectInstance(entry.effect(), duration, amplifier));
             }
         }
 
         if (!effectsShow.isEmpty()) {
-            PotionUtils.addPotionTooltip(effectsShow, tooltip, 1.0F);
+            tooltip.accept(CommonComponents.space());
+            PotionContents.addPotionTooltip(effectsShow, tooltip, 1.0F, context.tickRate());
         }
     }
 

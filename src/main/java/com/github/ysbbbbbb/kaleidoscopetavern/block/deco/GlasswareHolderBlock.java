@@ -1,7 +1,11 @@
 package com.github.ysbbbbbb.kaleidoscopetavern.block.deco;
 
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.Identifier;
 import com.github.ysbbbbbb.kaleidoscopetavern.blockentity.deco.GlasswareHolderBlockEntity;
 import com.github.ysbbbbbb.kaleidoscopetavern.init.ModItems;
+import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.sounds.SoundEvents;
@@ -27,7 +31,7 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
-import net.minecraftforge.items.ItemStackHandler;
+import net.neoforged.neoforge.items.ItemStackHandler;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
@@ -36,28 +40,33 @@ import java.util.List;
 public class GlasswareHolderBlock extends HorizontalDirectionalBlock implements EntityBlock {
     public static final VoxelShape NORTH_SOUTH_SHAPE = Block.box(0, 11, 1, 16, 16, 15);
     public static final VoxelShape EAST_WEST_SHAPE = Block.box(1, 11, 0, 15, 16, 16);
+    private static final MapCodec<GlasswareHolderBlock> CODEC = simpleCodec(GlasswareHolderBlock::new);
 
-    public GlasswareHolderBlock() {
-        super(Properties.of()
+    public GlasswareHolderBlock(Identifier id) {
+        this(Properties.of().setId(ResourceKey.create(Registries.BLOCK, id))
                 .mapColor(MapColor.METAL)
                 .strength(0.8F)
                 .sound(SoundType.METAL)
                 .lightLevel(s -> 8)
                 .noOcclusion());
+    }
+
+    public GlasswareHolderBlock(Properties properties) {
+        super(properties);
         this.registerDefaultState(this.stateDefinition.any()
                 .setValue(FACING, Direction.NORTH));
     }
 
     @Override
-    public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player,
-                                 InteractionHand hand, BlockHitResult hitResult) {
+    protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
+                                              Player player, InteractionHand hand, BlockHitResult hitResult) {
         if (hand != InteractionHand.MAIN_HAND) {
-            return InteractionResult.PASS;
+            return InteractionResult.TRY_WITH_EMPTY_HAND;
         }
 
         BlockEntity blockEntity = level.getBlockEntity(pos);
         if (!(blockEntity instanceof GlasswareHolderBlockEntity be)) {
-            return InteractionResult.PASS;
+            return InteractionResult.TRY_WITH_EMPTY_HAND;
         }
 
         int slot = this.getSlotFromHit(hitResult, pos);
@@ -73,13 +82,13 @@ public class GlasswareHolderBlock extends HorizontalDirectionalBlock implements 
             return takeOut(level, pos, player, be, slot);
         }
 
-        return InteractionResult.PASS;
+        return InteractionResult.TRY_WITH_EMPTY_HAND;
     }
 
     private InteractionResult takeOut(Level level, BlockPos pos, Player player, GlasswareHolderBlockEntity be, int slot) {
         ItemStackHandler items = be.getItems();
         if (items.getStackInSlot(slot).isEmpty()) {
-            return InteractionResult.PASS;
+            return InteractionResult.TRY_WITH_EMPTY_HAND;
         }
 
         if (!level.isClientSide()) {
@@ -89,11 +98,11 @@ public class GlasswareHolderBlock extends HorizontalDirectionalBlock implements 
             level.playSound(null, pos, SoundEvents.AMETHYST_BLOCK_PLACE, SoundSource.BLOCKS);
         }
 
-        return InteractionResult.sidedSuccess(level.isClientSide());
+        return InteractionResult.SUCCESS;
     }
 
     private InteractionResult putOn(Level level, BlockPos pos, Player player, GlasswareHolderBlockEntity be,
-                                    int slot
+                                        int slot
     ) {
         ItemStackHandler items = be.getItems();
         if (!items.getStackInSlot(slot).isEmpty()) {
@@ -110,7 +119,7 @@ public class GlasswareHolderBlock extends HorizontalDirectionalBlock implements 
             level.playSound(null, pos, SoundEvents.AMETHYST_BLOCK_PLACE, SoundSource.BLOCKS);
         }
 
-        return InteractionResult.sidedSuccess(level.isClientSide());
+        return InteractionResult.SUCCESS;
     }
 
     private int getSlotFromHit(BlockHitResult hitResult, BlockPos pos) {
@@ -166,5 +175,10 @@ public class GlasswareHolderBlock extends HorizontalDirectionalBlock implements 
             case NORTH, SOUTH -> NORTH_SOUTH_SHAPE;
             default -> EAST_WEST_SHAPE;
         };
+    }
+
+    @Override
+    protected MapCodec<? extends HorizontalDirectionalBlock> codec() {
+        return CODEC;
     }
 }

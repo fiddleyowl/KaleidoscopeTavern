@@ -1,18 +1,19 @@
 package com.github.ysbbbbbb.kaleidoscopetavern.util;
 
 import com.github.ysbbbbbb.kaleidoscopetavern.datamap.data.DrinkEffectData;
-import com.github.ysbbbbbb.kaleidoscopetavern.datamap.resources.DrinkEffectDataReloadListener;
+import com.github.ysbbbbbb.kaleidoscopetavern.datamap.DrinkEffectResolver;
+import net.minecraft.core.HolderLookup;
 import com.github.ysbbbbbb.kaleidoscopetavern.item.BottleBlockItem;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import net.minecraft.ChatFormatting;
+import net.minecraft.core.Holder;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.PotionItem;
-import net.minecraft.world.item.alchemy.PotionUtils;
-import net.minecraftforge.items.ItemStackHandler;
+import net.minecraft.world.item.alchemy.PotionContents;
+import net.neoforged.neoforge.items.ItemStackHandler;
 
 import java.util.List;
 import java.util.Map;
@@ -38,10 +39,9 @@ public class CocktailEffectHelper {
      * 遍历雪克杯 storage 中的所有原料，提取效果和颜色。
      * <p>
      * 药水特判：视为白色，效果直接从药水数据提取。
-     * 普通原料：根据 brewLevel 从 DrinkEffectDataReloadListener 获取对应等级效果。
+     * 普通原料：根据 brewLevel 从 DrinkEffectResolver 获取对应等级效果。
      */
-    public static CollectedData collectFromStorage(ItemStackHandler storage) {
-        Map<Item, DrinkEffectData> dataMap = DrinkEffectDataReloadListener.INSTANCE;
+    public static CollectedData collectFromStorage(ItemStackHandler storage, HolderLookup.Provider registries) {
         List<DrinkEffectData.Entry> effects = Lists.newArrayList();
         List<ChatFormatting> colors = Lists.newArrayList();
 
@@ -52,10 +52,11 @@ public class CocktailEffectHelper {
             }
 
             // 药水特判：颜色固定白色，效果从药水数据提取
-            if (ingredient.getItem() instanceof PotionItem) {
+            PotionContents contents = ingredient.get(DataComponents.POTION_CONTENTS);
+            if (contents != null) {
                 colors.add(ChatFormatting.WHITE);
 
-                List<MobEffectInstance> potionEffects = PotionUtils.getMobEffects(ingredient);
+                Iterable<MobEffectInstance> potionEffects = contents.getAllEffects();
                 for (MobEffectInstance e : potionEffects) {
                     // 药水时长是 tick，DrinkEffectData.Entry 使用秒
                     int durationSeconds = e.getDuration() / 20;
@@ -75,11 +76,8 @@ public class CocktailEffectHelper {
 
             // 根据 brewLevel 获取对应等级的效果
             int brewLevel = BottleBlockItem.getBrewLevel(ingredient);
-            if (brewLevel > 0 && dataMap.containsKey(ingredient.getItem())) {
-                DrinkEffectData data = dataMap.get(ingredient.getItem());
-                List<List<DrinkEffectData.Entry>> effectsList = data.effects();
-                brewLevel = Math.min(brewLevel, effectsList.size());
-                effects.addAll(effectsList.get(brewLevel - 1));
+            if (brewLevel > 0) {
+                effects.addAll(DrinkEffectResolver.entriesFor(registries, ingredient, brewLevel));
             }
         }
 
@@ -92,14 +90,14 @@ public class CocktailEffectHelper {
      */
     public static List<DrinkEffectData.Entry> mergeEffects(List<DrinkEffectData.Entry> effects) {
         // 按 MobEffect 分组，保持插入顺序
-        Map<MobEffect, List<DrinkEffectData.Entry>> grouped = Maps.newLinkedHashMap();
+        Map<Holder<MobEffect>, List<DrinkEffectData.Entry>> grouped = Maps.newLinkedHashMap();
         for (DrinkEffectData.Entry entry : effects) {
             grouped.computeIfAbsent(entry.effect(), k -> Lists.newArrayList())
                     .add(entry);
         }
 
         List<DrinkEffectData.Entry> merged = Lists.newArrayList();
-        for (Map.Entry<MobEffect, List<DrinkEffectData.Entry>> e : grouped.entrySet()) {
+        for (var e : grouped.entrySet()) {
             int totalDuration = 0;
             int maxAmplifier = 0;
             float maxProbability = 0;

@@ -1,12 +1,16 @@
 package com.github.ysbbbbbb.kaleidoscopetavern.item;
 
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
-import net.minecraftforge.registries.RegistryObject;
+
+import java.util.function.Supplier;
 
 public class SofaBlockItem extends BlockItem {
-    public SofaBlockItem(RegistryObject<Block> block) {
-        super(block.get(), new Item.Properties());
+    public SofaBlockItem(Identifier id, Supplier<? extends Block> block) {
+        super(block.get(), new Item.Properties().useBlockDescriptionPrefix().setId(ResourceKey.create(Registries.ITEM, id)));
     }
 }

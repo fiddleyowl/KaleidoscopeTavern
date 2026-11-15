@@ -1,11 +1,12 @@
 package com.github.ysbbbbbb.kaleidoscopetavern.blockentity.deco;
 
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import com.github.ysbbbbbb.kaleidoscopetavern.blockentity.BaseBlockEntity;
 import net.minecraft.core.BlockPos;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.items.ItemStackHandler;
+import net.neoforged.neoforge.items.ItemStackHandler;
 
 public abstract class StorageBlockEntity extends BaseBlockEntity {
     private static final String ITEMS = "items";
@@ -22,17 +23,15 @@ public abstract class StorageBlockEntity extends BaseBlockEntity {
     }
 
     @Override
-    public void load(CompoundTag tag) {
-        super.load(tag);
-        if (tag.contains(ITEMS)) {
-            this.items.deserializeNBT(tag.getCompound(ITEMS));
-        }
+    protected void loadAdditional(ValueInput input) {
+        super.loadAdditional(input);
+        this.items.deserialize(input.childOrEmpty(ITEMS));
     }
 
     @Override
-    protected void saveAdditional(CompoundTag tag) {
-        super.saveAdditional(tag);
-        tag.put(ITEMS, this.items.serializeNBT());
+    protected void saveAdditional(ValueOutput output) {
+        super.saveAdditional(output);
+        this.items.serialize(output.child(ITEMS));
     }
 
     public ItemStackHandler getItems() {

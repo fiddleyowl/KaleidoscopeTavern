@@ -1,5 +1,6 @@
 package com.github.ysbbbbbb.kaleidoscopetavern.effect;
 
+import com.github.ysbbbbbb.kaleidoscopetavern.init.ModEffects;
 import com.github.ysbbbbbb.kaleidoscopetavern.init.tag.TagMod;
 import com.google.common.collect.Lists;
 import net.minecraft.core.BlockPos;
@@ -35,28 +36,28 @@ public class ArdentHeatEffect extends BaseEffect {
     }
 
     @Override
-    public boolean isDurationEffectTick(int duration, int amplifier) {
+    public boolean shouldApplyEffectTickThisTick(int duration, int amplifier) {
         return true;
     }
 
     @Override
-    public void applyEffectTick(LivingEntity livingEntity, int amplifier) {
+    public boolean applyEffectTick(net.minecraft.server.level.ServerLevel serverLevel, LivingEntity livingEntity, int amplifier) {
         if (!(livingEntity instanceof Player player)) {
-            return;
+            return true;
         }
         Level level = player.level();
         if (level.isClientSide()) {
-            return;
+            return true;
         }
 
         // 即将过期时给予30秒饥饿效果
-        MobEffectInstance instance = player.getEffect(this);
+        MobEffectInstance instance = player.getEffect(ModEffects.ARDENT_HEAT);
         if (instance != null && instance.getDuration() <= 1) {
             player.addEffect(new MobEffectInstance(MobEffects.HUNGER, 600, 0));
         }
 
         if (!player.isSprinting()) {
-            return;
+            return true;
         }
 
         // 撞破面前 3×3 的石头
@@ -85,16 +86,16 @@ public class ArdentHeatEffect extends BaseEffect {
 
             if (!slots.isEmpty()) {
                 // 撞墙时随机选择一个扣除耐久
-                int index = level.random.nextInt(slots.size());
+                int index = level.getRandom().nextInt(slots.size());
                 EquipmentSlot selected = slots.get(index);
                 ItemStack armor = player.getItemBySlot(selected);
                 if (armor.isDamageableItem()) {
-                    armor.hurtAndBreak(1, player, p -> p.broadcastBreakEvent(selected));
+                    armor.hurtAndBreak(1, player, selected);
                 }
             } else {
                 // 不穿盔甲时，累计撞击 5 次扣 1 点伤害
                 CompoundTag data = player.getPersistentData();
-                int count = data.getInt(COLLISION_COUNT_TAG) + 1;
+                int count = data.getIntOr(COLLISION_COUNT_TAG, 0) + 1;
                 if (count >= 5) {
                     player.hurt(player.damageSources().generic(), 1.0F);
                     count -= 5;
@@ -102,6 +103,7 @@ public class ArdentHeatEffect extends BaseEffect {
                 data.putInt(COLLISION_COUNT_TAG, count);
             }
         }
+        return true;
     }
 
     /**

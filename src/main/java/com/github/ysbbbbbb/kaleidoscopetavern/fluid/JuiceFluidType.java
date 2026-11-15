@@ -1,33 +1,27 @@
 package com.github.ysbbbbbb.kaleidoscopetavern.fluid;
 
-import net.minecraft.Util;
 import net.minecraft.core.BlockPos;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.SoundEvents;
+import net.minecraft.util.Util;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.material.FluidState;
-import net.minecraft.world.level.pathfinder.BlockPathTypes;
-import net.minecraftforge.client.extensions.common.IClientFluidTypeExtensions;
-import net.minecraftforge.common.SoundActions;
-import net.minecraftforge.fluids.FluidType;
+import net.minecraft.world.level.pathfinder.PathType;
+import net.neoforged.neoforge.common.SoundActions;
+import net.neoforged.neoforge.fluids.FluidType;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.function.Consumer;
 
 public class JuiceFluidType extends FluidType {
-    private final ResourceLocation id;
-    private final ResourceLocation stillTexture;
-    private final ResourceLocation flowingTexture;
+    private final Identifier id;
 
-    public JuiceFluidType(ResourceLocation id, Properties properties) {
+    public JuiceFluidType(Identifier id, Properties properties) {
         super(properties);
         this.id = id;
-        this.stillTexture = new ResourceLocation(this.id.getNamespace(), "block/%s_still".formatted(id.getPath()));
-        this.flowingTexture = new ResourceLocation(this.id.getNamespace(), "block/%s_flow".formatted(id.getPath()));
     }
 
-    public JuiceFluidType(ResourceLocation id, int lightLevel) {
+    public JuiceFluidType(Identifier id, int lightLevel) {
         this(id, FluidType.Properties.create()
                 .descriptionId(Util.makeDescriptionId("block", id))
                 .fallDistanceModifier(0)
@@ -42,29 +36,14 @@ public class JuiceFluidType extends FluidType {
         );
     }
 
-    public ResourceLocation getId() {
+    public Identifier getId() {
         return id;
     }
 
     @Override
     @Nullable
-    public BlockPathTypes getBlockPathType(FluidState state, BlockGetter level, BlockPos pos,
-                                           @Nullable Mob mob, boolean canFluidLog) {
+    public PathType getBlockPathType(FluidState state, BlockGetter level, BlockPos pos,
+                                     @Nullable Mob mob, boolean canFluidLog) {
         return canFluidLog ? super.getBlockPathType(state, level, pos, mob, true) : null;
-    }
-
-    @Override
-    public void initializeClient(Consumer<IClientFluidTypeExtensions> consumer) {
-        consumer.accept(new IClientFluidTypeExtensions() {
-            @Override
-            public ResourceLocation getStillTexture() {
-                return stillTexture;
-            }
-
-            @Override
-            public ResourceLocation getFlowingTexture() {
-                return flowingTexture;
-            }
-        });
     }
 }

@@ -1,23 +1,27 @@
 package com.github.ysbbbbbb.kaleidoscopetavern.item;
 
+import net.minecraft.world.item.component.TooltipDisplay;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.Identifier;
 import com.github.ysbbbbbb.kaleidoscopetavern.blockentity.mixology.SignatureCocktailBlockEntity;
-import com.github.ysbbbbbb.kaleidoscopetavern.client.animation.ShakerAnimation;
+import com.github.ysbbbbbb.kaleidoscopetavern.crafting.container.SimpleInput;
 import com.github.ysbbbbbb.kaleidoscopetavern.datamap.data.DrinkEffectData;
-import com.github.ysbbbbbb.kaleidoscopetavern.init.ModBlocks;
-import com.github.ysbbbbbb.kaleidoscopetavern.init.ModItems;
-import com.github.ysbbbbbb.kaleidoscopetavern.init.ModRecipes;
-import com.github.ysbbbbbb.kaleidoscopetavern.init.ModSounds;
+import com.github.ysbbbbbb.kaleidoscopetavern.init.*;
 import com.github.ysbbbbbb.kaleidoscopetavern.util.CocktailEffectHelper;
 import com.github.ysbbbbbb.kaleidoscopetavern.util.ColorUtils;
 import com.google.common.collect.Lists;
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.RegistryAccess;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.Tag;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.game.ClientboundSetActionBarTextPacket;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -25,72 +29,65 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.InteractionResultHolder;
-import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.component.ItemContainerContents;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.item.crafting.RecipeManager;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.client.extensions.common.IClientItemExtensions;
-import net.minecraftforge.items.ItemStackHandler;
-import org.jetbrains.annotations.Nullable;
+import net.neoforged.neoforge.items.ItemStackHandler;
 
 import java.util.List;
-import java.util.function.Consumer;
 
 import static com.github.ysbbbbbb.kaleidoscopetavern.block.mixology.GlasswareBlock.FACING;
 
 public class ShakerItem extends BlockItem {
-    private static final String STORAGE_TAG = "Storage";
-    private static final String RESULT_TAG = "Result";
+    private static final int STORAGE_SIZE = 3;
 
-    public ShakerItem() {
-        super(ModBlocks.SHAKER.get(), new Properties().stacksTo(1));
+    public ShakerItem(Identifier id) {
+        super(ModBlocks.SHAKER.get(), new Properties().useBlockDescriptionPrefix().setId(ResourceKey.create(Registries.ITEM, id)).stacksTo(1));
     }
 
     public static ItemStackHandler getStorage(ItemStack stack) {
-        CompoundTag tag = stack.getOrCreateTag();
-        ItemStackHandler handler = new ItemStackHandler();
-        handler.deserializeNBT(tag.getCompound(STORAGE_TAG));
+        ItemStackHandler handler = new ItemStackHandler(STORAGE_SIZE);
+        ItemContainerContents contents = stack.getOrDefault(DataComponents.CONTAINER, ItemContainerContents.EMPTY);
+        for (int i = 0; i < Math.min(handler.getSlots(), contents.getSlots()); i++) {
+            handler.setStackInSlot(i, contents.getStackInSlot(i));
+        }
         return handler;
     }
 
     public static void setStorage(ItemStack stack, ItemStackHandler handler) {
-        CompoundTag tag = stack.getOrCreateTag();
-        tag.put(STORAGE_TAG, handler.serializeNBT());
+        List<ItemStack> items = Lists.newArrayList();
+        for (int i = 0; i < handler.getSlots(); i++) {
+            items.add(handler.getStackInSlot(i));
+        }
+        stack.set(DataComponents.CONTAINER, ItemContainerContents.fromItems(items));
     }
 
     public static boolean hasStorage(ItemStack stack) {
-        return stack.getOrCreateTag().contains(STORAGE_TAG);
+        return stack.has(DataComponents.CONTAINER);
     }
 
     public static ItemStack getResult(ItemStack stack) {
-        CompoundTag tag = stack.getOrCreateTag();
-        if (!tag.contains(RESULT_TAG, Tag.TAG_COMPOUND)) {
-            return ItemStack.EMPTY;
-        }
-        return ItemStack.of(tag.getCompound(RESULT_TAG));
+        return stack.getOrDefault(ModDataComponents.SHAKER_RESULT, Result.EMPTY).stack();
     }
 
     public static void setResult(ItemStack stack, ItemStack result) {
-        CompoundTag tag = stack.getOrCreateTag();
-        tag.put(RESULT_TAG, result.serializeNBT());
+        stack.set(ModDataComponents.SHAKER_RESULT, new Result(result.copy()));
     }
 
     public static boolean hasResult(ItemStack stack) {
-        CompoundTag tag = stack.getOrCreateTag();
-        return tag.contains(RESULT_TAG, Tag.TAG_COMPOUND);
+        return stack.has(ModDataComponents.SHAKER_RESULT) && !getResult(stack).isEmpty();
     }
 
     public static void removeAll(ItemStack stack) {
-        CompoundTag tag = stack.getOrCreateTag();
-        tag.remove(RESULT_TAG);
-        tag.remove(STORAGE_TAG);
+        stack.remove(ModDataComponents.SHAKER_RESULT);
+        stack.remove(DataComponents.CONTAINER);
     }
 
     @Override
@@ -130,7 +127,7 @@ public class ShakerItem extends BlockItem {
             ItemStackHandler storage = getStorage(stack);
 
             // 数据计算
-            CocktailEffectHelper.CollectedData data = CocktailEffectHelper.collectFromStorage(storage);
+            CocktailEffectHelper.CollectedData data = CocktailEffectHelper.collectFromStorage(storage, level.registryAccess());
             List<DrinkEffectData.Entry> mergedEffects = CocktailEffectHelper.mergeEffects(data.effects());
             int finalColor = ColorUtils.mixColors(data.colors());
 
@@ -144,7 +141,7 @@ public class ShakerItem extends BlockItem {
 
         if (level instanceof ServerLevel serverLevel) {
             serverLevel.sendParticles(
-                    ParticleTypes.EFFECT,
+                    net.minecraft.core.particles.SpellParticleOption.create(ParticleTypes.EFFECT, -1, 1.0F),
                     pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5,
                     20, 0.1, 0.1, 0.1, 0.5
             );
@@ -154,16 +151,16 @@ public class ShakerItem extends BlockItem {
     }
 
     @Override
-    public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
+    public InteractionResult use(Level level, Player player, InteractionHand hand) {
         ItemStack itemInHand = player.getItemInHand(hand);
         // 如果已经有结果了，不能再摇了
         if (hasResult(itemInHand)) {
-            return InteractionResultHolder.pass(itemInHand);
+            return InteractionResult.PASS;
         }
 
         // 物品数量检查
         if (!hasStorageItem(itemInHand)) {
-            return InteractionResultHolder.pass(itemInHand);
+            return InteractionResult.PASS;
         }
 
         // 检查是否三瓶全满
@@ -177,12 +174,12 @@ public class ShakerItem extends BlockItem {
                 Component message = Component.translatable("message.kaleidoscope_tavern.shaker.amount_too_low");
                 serverPlayer.connection.send(new ClientboundSetActionBarTextPacket(message));
             }
-            return InteractionResultHolder.pass(itemInHand);
+            return InteractionResult.PASS;
         }
 
         // 然后才能摇
         player.startUsingItem(hand);
-        return InteractionResultHolder.consume(itemInHand);
+        return InteractionResult.CONSUME;
     }
 
     private boolean hasStorageItem(ItemStack itemInHand) {
@@ -203,8 +200,8 @@ public class ShakerItem extends BlockItem {
     public void onUseTick(Level level, LivingEntity entity, ItemStack stack, int remainingUseDuration) {
         if (remainingUseDuration % 10 == 0) {
             entity.playSound(ModSounds.SHAKER_SHAKING.get(),
-                    level.random.nextFloat() * 0.2F + 0.75F,
-                    level.random.nextFloat() * 0.2F + 0.8F
+                    level.getRandom().nextFloat() * 0.2F + 0.75F,
+                    level.getRandom().nextFloat() * 0.2F + 0.8F
             );
         }
         // 超出时长，强制中断
@@ -221,13 +218,13 @@ public class ShakerItem extends BlockItem {
      * <= 110 迷之鸡尾酒
      */
     @Override
-    public void releaseUsing(ItemStack stack, Level level, LivingEntity entity, int timeLeft) {
-        int time = this.getUseDuration(stack) - timeLeft;
+    public boolean releaseUsing(ItemStack stack, Level level, LivingEntity entity, int timeLeft) {
+        int time = this.getUseDuration(stack, entity) - timeLeft;
         if (time < 19) {
-            return;
+            return false;
         }
         // 调酒
-        if (!level.isClientSide) {
+        if (!level.isClientSide()) {
             if (time < 69) {
                 setResult(stack, new ItemStack(ModItems.MYSTERY_COCKTAIL.get()));
             } else if (time < 89) {
@@ -239,6 +236,7 @@ public class ShakerItem extends BlockItem {
             }
         }
         entity.playSound(ModSounds.SHAKER_END.get());
+        return true;
     }
 
     private void handRecipe(Level level, ItemStack stack) {
@@ -252,33 +250,29 @@ public class ShakerItem extends BlockItem {
             stacks.add(ingredient);
         }
 
-        SimpleContainer container = new SimpleContainer(stacks.toArray(new ItemStack[0]));
-        RecipeManager manager = level.getRecipeManager();
+        SimpleInput container = new SimpleInput(stacks);
+        if (!(level instanceof ServerLevel serverLevel)) return;
+        RecipeManager manager = serverLevel.recipeAccess();
         RegistryAccess access = level.registryAccess();
 
-        manager.getRecipeFor(ModRecipes.SHAKER_RECIPE, container, level).ifPresentOrElse(
-                recipe -> setResult(stack, recipe.assemble(container, access)),
+        manager.getRecipeFor(ModRecipes.SHAKER_RECIPE.get(), container, level).ifPresentOrElse(
+                recipe -> setResult(stack, recipe.value().assemble(container)),
                 () -> setResult(stack, new ItemStack(ModItems.SIGNATURE_COCKTAIL.get()))
         );
     }
 
     @Override
-    public int getUseDuration(ItemStack pStack) {
+    public int getUseDuration(ItemStack pStack, LivingEntity entity) {
         return 72000;
     }
 
     @Override
-    public void initializeClient(Consumer<IClientItemExtensions> consumer) {
-        consumer.accept(new ShakerAnimation.ShakerExtensions());
-    }
-
-    @Override
-    public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> tooltip, TooltipFlag flag) {
+    public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay display, java.util.function.Consumer<Component> tooltip, TooltipFlag flag) {
         if (hasResult(stack)) {
             ItemStack result = getResult(stack);
             if (result.getHoverName() instanceof MutableComponent component) {
                 MutableComponent text = component.withStyle(ChatFormatting.GRAY);
-                tooltip.add(Component.literal("▶ ")
+                tooltip.accept(Component.literal("▶ ")
                         .withStyle(ChatFormatting.GRAY)
                         .append(text));
             }
@@ -295,11 +289,23 @@ public class ShakerItem extends BlockItem {
                         chatFormatting = ChatFormatting.GRAY;
                     }
                     MutableComponent text = component.withStyle(chatFormatting);
-                    tooltip.add(Component.literal("▶ ")
+                    tooltip.accept(Component.literal("▶ ")
                             .withStyle(ChatFormatting.GRAY)
                             .append(text));
                 }
             }
         }
+    }
+
+    public record Result(ItemStack stack) {
+        public static final Codec<Result> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+                ItemStack.OPTIONAL_CODEC.fieldOf("stack").forGetter(Result::stack)
+        ).apply(instance, Result::new));
+
+        public static final StreamCodec<RegistryFriendlyByteBuf, Result> STREAM_CODEC = StreamCodec.composite(
+                ItemStack.OPTIONAL_STREAM_CODEC, Result::stack, Result::new
+        );
+
+        public static final Result EMPTY = new Result(ItemStack.EMPTY);
     }
 }

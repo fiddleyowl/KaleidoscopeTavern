@@ -3,7 +3,6 @@ package com.github.ysbbbbbb.kaleidoscopetavern.blockentity.deco;
 import com.github.ysbbbbbb.kaleidoscopetavern.init.ModBlocks;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.phys.AABB;
 
 public class ChalkboardBlockEntity extends TextBlockEntity {
     /**
@@ -32,14 +31,6 @@ public class ChalkboardBlockEntity extends TextBlockEntity {
         return this.isLarge() ? 1500 : 350;
     }
 
-    @Override
-    public AABB getRenderBoundingBox() {
-        BlockPos pos = this.getBlockPos();
-        if (this.isLarge) {
-            return new AABB(pos.offset(-1, 0, -1), pos.offset(2, 2, 2));
-        }
-        return new AABB(pos, pos.offset(1, 2, 1));
-    }
 
     public boolean isLarge() {
         return isLarge;

@@ -12,25 +12,25 @@ import dev.emi.emi.api.stack.EmiStack;
 import dev.emi.emi.api.widget.WidgetHolder;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import net.minecraft.ChatFormatting;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.crafting.Ingredient;
 
 import java.util.List;
 
 public class EmiShakerRecipe extends BasicEmiRecipe {
     public static final EmiRecipeCategory CATEGORY = new EmiRecipeCategory(
-            new ResourceLocation(ModRecipes.SHAKER_RECIPE.toString()),
+            Identifier.parse(ModRecipes.SHAKER_RECIPE.toString()),
             EmiIngredient.of(Ingredient.of(ModItems.SHAKER.get()))
     );
 
-    private static final ResourceLocation BG = KaleidoscopeTavern.modLoc("textures/gui/jei/shaker.png");
+    private static final Identifier BG = KaleidoscopeTavern.modLoc("textures/gui/jei/shaker.png");
 
     public static final int WIDTH = 150;
     public static final int HEIGHT = 80;
 
     private final Int2ObjectMap<ChatFormatting> ingredientColors;
 
-    public EmiShakerRecipe(ResourceLocation id, List<EmiIngredient> inputs, List<EmiStack> outputs,
+    public EmiShakerRecipe(Identifier id, List<EmiIngredient> inputs, List<EmiStack> outputs,
                            Int2ObjectMap<ChatFormatting> ingredientColors) {
         super(CATEGORY, id, WIDTH, HEIGHT);
         this.inputs = inputs;
@@ -42,7 +42,8 @@ public class EmiShakerRecipe extends BasicEmiRecipe {
         registry.addCategory(CATEGORY);
         registry.addWorkstation(CATEGORY, EmiStack.of(ModItems.SHAKER.get()));
 
-        registry.getRecipeManager().getAllRecipesFor(ModRecipes.SHAKER_RECIPE).forEach(recipe -> {
+        registry.getRecipeManager().getAllRecipesFor(ModRecipes.SHAKER_RECIPE).forEach(holder -> {
+            ShakerRecipe recipe = holder.value();
             List<EmiIngredient> inputs = recipe.getIngredients().stream()
                     .filter(i -> !i.isEmpty())
                     .map(EmiIngredient::of)
@@ -50,7 +51,7 @@ public class EmiShakerRecipe extends BasicEmiRecipe {
 
             List<EmiStack> outputs = List.of(EmiStack.of(recipe.result()));
 
-            registry.addRecipe(new EmiShakerRecipe(recipe.getId(), inputs, outputs, recipe.ingredientColors()));
+            registry.addRecipe(new EmiShakerRecipe(holder.id(), inputs, outputs, recipe.ingredientColors()));
         });
     }
 
@@ -73,7 +74,7 @@ public class EmiShakerRecipe extends BasicEmiRecipe {
                     guiGraphics.fill(0, 0, 5, 16, rgba));
         });
 
-        widgets.addSlot(outputs.get(0), 108, 32)
+        widgets.addSlot(outputs.getFirst(), 108, 32)
                 .recipeContext(this)
                 .large(true);
     }

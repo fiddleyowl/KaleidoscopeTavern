@@ -1,8 +1,12 @@
 package com.github.ysbbbbbb.kaleidoscopetavern.block.deco;
 
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.Identifier;
 import com.github.ysbbbbbb.kaleidoscopetavern.block.AbstractStorageBlock;
 import com.github.ysbbbbbb.kaleidoscopetavern.blockentity.deco.CircularRackBlockEntity;
 import com.github.ysbbbbbb.kaleidoscopetavern.init.tag.TagMod;
+import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.particles.ParticleTypes;
@@ -15,6 +19,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.HorizontalDirectionalBlock;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -28,23 +33,28 @@ import org.jetbrains.annotations.Nullable;
 @SuppressWarnings("deprecation")
 public class CircularRackBlock extends AbstractStorageBlock {
     public static final VoxelShape SHAPE = Block.box(0, 0, 0, 16, 2, 16);
+    private static final MapCodec<CircularRackBlock> CODEC = simpleCodec(CircularRackBlock::new);
 
-    public CircularRackBlock() {
-        super(Properties.of()
+    public CircularRackBlock(Identifier id) {
+        this(Properties.of().setId(ResourceKey.create(Registries.BLOCK, id))
                 .mapColor(MapColor.WOOD)
                 .strength(2.5F)
                 .sound(SoundType.WOOD)
                 .noOcclusion()
                 .lightLevel(s -> 14)
                 .ignitedByLava());
+    }
+
+    public CircularRackBlock(Properties properties) {
+        super(properties);
         this.registerDefaultState(this.stateDefinition.any()
                 .setValue(FACING, Direction.NORTH)
                 .setValue(POWERED, false));
     }
 
     @Override
-    public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player,
-                                 InteractionHand hand, BlockHitResult hitResult) {
+    protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
+                                              Player player, InteractionHand hand, BlockHitResult hitResult) {
         return super.handleUse(state, level, pos, player, hand, hitResult);
     }
 
@@ -116,6 +126,11 @@ public class CircularRackBlock extends AbstractStorageBlock {
     @Override
     public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
         return SHAPE;
+    }
+
+    @Override
+    protected MapCodec<? extends HorizontalDirectionalBlock> codec() {
+        return CODEC;
     }
 }
 

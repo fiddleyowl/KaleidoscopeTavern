@@ -1,7 +1,7 @@
 package com.github.ysbbbbbb.kaleidoscopetavern.init.tag;
 
 import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
@@ -33,33 +33,38 @@ public interface TagCommon {
     TagKey<Block> MOIST_HUMID = eclipticSeasonsTag("crops/moist_humid");
     TagKey<Block> HUMID_HUMID = eclipticSeasonsTag("crops/humid_humid");
 
+    /**
+     * CarryOn 黑名单标签，被此标签包含的方块将无法被 CarryOn 抱起
+     */
+    TagKey<Block> CARRYON_BLOCK_BLACKLIST = TagKey.create(Registries.BLOCK, Identifier.parse("carryon:block_blacklist"));
+
     static TagKey<Item> itemTag(String name) {
-        return TagKey.create(Registries.ITEM, new ResourceLocation("forge", name));
+        return TagKey.create(Registries.ITEM, Identifier.fromNamespaceAndPath("c", name));
     }
 
     /**
      * 兼容均衡饮食模组
      */
     static TagKey<Item> dietTag(String name) {
-        return TagKey.create(Registries.ITEM, new ResourceLocation("diet", name));
+        return TagKey.create(Registries.ITEM, Identifier.fromNamespaceAndPath("diet", name));
     }
 
     /**
      * 静谧四季模组兼容
      */
     static TagKey<Item> seasonsItemTag(String name) {
-        return TagKey.create(Registries.ITEM, new ResourceLocation("sereneseasons", name));
+        return TagKey.create(Registries.ITEM, Identifier.fromNamespaceAndPath("sereneseasons", name));
     }
 
     static TagKey<Block> seasonsBlockTag(String name) {
-        return TagKey.create(Registries.BLOCK, new ResourceLocation("sereneseasons", name));
+        return TagKey.create(Registries.BLOCK, Identifier.fromNamespaceAndPath("sereneseasons", name));
     }
 
     static TagKey<Block> blockTag(String name) {
-        return TagKey.create(Registries.BLOCK, new ResourceLocation("forge", name));
+        return TagKey.create(Registries.BLOCK, Identifier.fromNamespaceAndPath("forge", name));
     }
 
     static TagKey<Block> eclipticSeasonsTag(String name) {
-        return TagKey.create(Registries.BLOCK, new ResourceLocation("eclipticseasons", name));
+        return TagKey.create(Registries.BLOCK, Identifier.fromNamespaceAndPath("eclipticseasons", name));
     }
 }

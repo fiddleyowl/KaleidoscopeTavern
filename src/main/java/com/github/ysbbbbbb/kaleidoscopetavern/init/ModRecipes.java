@@ -4,37 +4,29 @@ import com.github.ysbbbbbb.kaleidoscopetavern.KaleidoscopeTavern;
 import com.github.ysbbbbbb.kaleidoscopetavern.crafting.recipe.BarrelRecipe;
 import com.github.ysbbbbbb.kaleidoscopetavern.crafting.recipe.PressingTubRecipe;
 import com.github.ysbbbbbb.kaleidoscopetavern.crafting.recipe.ShakerRecipe;
-import com.github.ysbbbbbb.kaleidoscopetavern.crafting.serializer.BarrelRecipeSerializer;
-import com.github.ysbbbbbb.kaleidoscopetavern.crafting.serializer.PressingTubRecipeSerializer;
-import com.github.ysbbbbbb.kaleidoscopetavern.crafting.serializer.ShakerRecipeSerializer;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.world.item.crafting.RecipeBookCategory;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.item.crafting.RecipeType;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.registries.DeferredRegister;
-import net.minecraftforge.registries.ForgeRegistries;
-import net.minecraftforge.registries.RegisterEvent;
-import net.minecraftforge.registries.RegistryObject;
+import net.neoforged.neoforge.registries.DeferredRegister;
 
-@Mod.EventBusSubscriber(bus = Mod.EventBusSubscriber.Bus.MOD)
-public class ModRecipes {
-    public static final DeferredRegister<RecipeSerializer<?>> RECIPE_SERIALIZERS = DeferredRegister.create(ForgeRegistries.RECIPE_SERIALIZERS, KaleidoscopeTavern.MOD_ID);
+import java.util.function.Supplier;
 
-    public static RegistryObject<RecipeSerializer<?>> PRESSING_TUB_SERIALIZER = RECIPE_SERIALIZERS.register("pressing_tub", PressingTubRecipeSerializer::new);
-    public static RegistryObject<RecipeSerializer<?>> BARREL_SERIALIZER = RECIPE_SERIALIZERS.register("barrel", BarrelRecipeSerializer::new);
-    public static RegistryObject<RecipeSerializer<?>> SHAKER_SERIALIZER = RECIPE_SERIALIZERS.register("shaker", ShakerRecipeSerializer::new);
+public interface ModRecipes {
+    DeferredRegister<RecipeSerializer<?>> RECIPE_SERIALIZERS = DeferredRegister.create(Registries.RECIPE_SERIALIZER, KaleidoscopeTavern.MOD_ID);
+    DeferredRegister<RecipeType<?>> RECIPE_TYPES = DeferredRegister.create(Registries.RECIPE_TYPE, KaleidoscopeTavern.MOD_ID);
+    DeferredRegister<RecipeBookCategory> RECIPE_BOOK_CATEGORIES = DeferredRegister.create(Registries.RECIPE_BOOK_CATEGORY, KaleidoscopeTavern.MOD_ID);
 
-    public static RecipeType<PressingTubRecipe> PRESSING_TUB_RECIPE;
-    public static RecipeType<BarrelRecipe> BARREL_RECIPE;
-    public static RecipeType<ShakerRecipe> SHAKER_RECIPE;
+    Supplier<RecipeSerializer<PressingTubRecipe>> PRESSING_TUB_SERIALIZER = RECIPE_SERIALIZERS.register("pressing_tub", () -> PressingTubRecipe.SERIALIZER);
+    Supplier<RecipeSerializer<BarrelRecipe>> BARREL_SERIALIZER = RECIPE_SERIALIZERS.register("barrel", () -> BarrelRecipe.SERIALIZER);
 
-    @SubscribeEvent
-    public static void register(RegisterEvent evt) {
-        if (evt.getRegistryKey().equals(Registries.RECIPE_SERIALIZER)) {
-            PRESSING_TUB_RECIPE = RecipeType.simple(KaleidoscopeTavern.modLoc("pressing_tub"));
-            BARREL_RECIPE = RecipeType.simple(KaleidoscopeTavern.modLoc("barrel"));
-            SHAKER_RECIPE = RecipeType.simple(KaleidoscopeTavern.modLoc("shaker"));
-        }
-    }
+    Supplier<RecipeType<PressingTubRecipe>> PRESSING_TUB_RECIPE = RECIPE_TYPES.register("pressing_tub", () -> RecipeType.simple(KaleidoscopeTavern.modLoc("pressing_tub")));
+    Supplier<RecipeType<BarrelRecipe>> BARREL_RECIPE = RECIPE_TYPES.register("barrel", () -> RecipeType.simple(KaleidoscopeTavern.modLoc("barrel")));
+
+    Supplier<RecipeSerializer<ShakerRecipe>> SHAKER_SERIALIZER = RECIPE_SERIALIZERS.register("shaker", () -> ShakerRecipe.SERIALIZER);
+    Supplier<RecipeType<ShakerRecipe>> SHAKER_RECIPE = RECIPE_TYPES.register("shaker", () -> RecipeType.simple(KaleidoscopeTavern.modLoc("shaker")));
+    Supplier<RecipeBookCategory> SHAKER_RECIPE_CATEGORY = RECIPE_BOOK_CATEGORIES.register("shaker", RecipeBookCategory::new);
+
+    Supplier<RecipeBookCategory> PRESSING_TUB_RECIPE_CATEGORY = RECIPE_BOOK_CATEGORIES.register("pressing_tub", RecipeBookCategory::new);
+    Supplier<RecipeBookCategory> BARREL_RECIPE_CATEGORY = RECIPE_BOOK_CATEGORIES.register("barrel", RecipeBookCategory::new);
 }

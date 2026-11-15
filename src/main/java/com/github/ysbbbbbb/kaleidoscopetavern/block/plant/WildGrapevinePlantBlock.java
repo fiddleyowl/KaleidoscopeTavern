@@ -1,10 +1,14 @@
 package com.github.ysbbbbbb.kaleidoscopetavern.block.plant;
 
 import com.github.ysbbbbbb.kaleidoscopetavern.init.ModBlocks;
-import net.minecraft.BlockUtil;
+import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.tags.BlockTags;
+import net.minecraft.util.BlockUtil;
 import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.block.*;
 import net.minecraft.world.level.block.state.BlockBehaviour;
@@ -14,16 +18,23 @@ import net.minecraft.world.level.material.PushReaction;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
 public class WildGrapevinePlantBlock extends GrowingPlantBodyBlock implements BonemealableBlock {
-    private static final VoxelShape SHAPE = Block.box(1, 0, 1, 15, 16, 15);
-    private static final BlockBehaviour.Properties PROPERTIES = BlockBehaviour.Properties.of()
-            .mapColor(MapColor.PLANT)
-            .noCollission()
-            .instabreak()
-            .sound(SoundType.CAVE_VINES)
-            .pushReaction(PushReaction.DESTROY);
+    public static final MapCodec<WildGrapevinePlantBlock> CODEC = simpleCodec(WildGrapevinePlantBlock::new);
 
-    public WildGrapevinePlantBlock() {
-        super(PROPERTIES, Direction.DOWN, SHAPE, false);
+    private static final VoxelShape SHAPE = Block.box(1, 0, 1, 15, 16, 15);
+
+    public WildGrapevinePlantBlock(Identifier id) {
+        super(BlockBehaviour.Properties.of()
+                        .setId(ResourceKey.create(Registries.BLOCK, id))
+                        .mapColor(MapColor.PLANT)
+                        .noCollision()
+                        .instabreak()
+                        .sound(SoundType.CAVE_VINES)
+                        .pushReaction(PushReaction.DESTROY),
+                Direction.DOWN, SHAPE, false);
+    }
+
+    public WildGrapevinePlantBlock(Properties properties) {
+        super(properties, Direction.DOWN, SHAPE, false);
     }
 
     @Override
@@ -48,11 +59,16 @@ public class WildGrapevinePlantBlock extends GrowingPlantBodyBlock implements Bo
     }
 
     @Override
-    public boolean isValidBonemealTarget(LevelReader level, BlockPos pos, BlockState state, boolean isClient) {
+    public boolean isValidBonemealTarget(LevelReader level, BlockPos pos, BlockState state) {
         GrowingPlantHeadBlock headBlock = this.getHeadBlock();
         return BlockUtil.getTopConnectedBlock(level, pos, state.getBlock(), this.growthDirection, headBlock).map(headPos -> {
             BlockState blockState = level.getBlockState(headPos);
             return blockState.is(headBlock) && !blockState.getValue(WildGrapevineBlock.SHEARED);
         }).orElse(false);
+    }
+
+    @Override
+    protected MapCodec<? extends GrowingPlantBodyBlock> codec() {
+        return CODEC;
     }
 }

@@ -1,25 +1,30 @@
 package com.github.ysbbbbbb.kaleidoscopetavern.block.deco;
 
+import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import com.github.ysbbbbbb.kaleidoscopetavern.blockentity.deco.SandwichBlockEntity;
 import com.github.ysbbbbbb.kaleidoscopetavern.blockentity.deco.TextBlockEntity;
 import com.google.common.collect.Maps;
-import net.minecraft.ChatFormatting;
+import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.ProblemReporter;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.LevelAccessor;
+import net.minecraft.world.level.LevelReader;
+import net.minecraft.world.level.ScheduledTickAccess;
 import net.minecraft.world.level.block.*;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -28,6 +33,7 @@ import net.minecraft.world.level.block.state.properties.*;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.level.material.MapColor;
+import net.minecraft.world.level.storage.TagValueInput;
 import net.minecraft.world.level.storage.loot.LootParams;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
@@ -40,6 +46,7 @@ import java.util.Map;
 
 @SuppressWarnings("deprecation")
 public class SandwichBoardBlock extends BaseEntityBlock implements SimpleWaterloggedBlock {
+    public static final MapCodec<SandwichBoardBlock> CODEC = simpleCodec(p -> new SandwichBoardBlock(p, List.of()));
     public static final Map<Item, SandwichBoardBlock> TRANSFORM_MAP = Maps.newHashMap();
 
     public static final IntegerProperty ROTATION = BlockStateProperties.ROTATION_16;
@@ -53,16 +60,17 @@ public class SandwichBoardBlock extends BaseEntityBlock implements SimpleWaterlo
      * 右键交互，可以变成此变种展板的物品。
      */
     private final List<Item> transformItems;
-    private @Nullable List<String> transformItemNames;
 
-    public SandwichBoardBlock(Item... transformItems) {
+    public SandwichBoardBlock(Identifier id, Item... transformItems) {
         super(Properties.of()
+                .setId(ResourceKey.create(Registries.BLOCK, id))
                 .mapColor(MapColor.WOOD)
                 .instrument(NoteBlockInstrument.GUITAR)
                 .strength(0.8F)
                 .sound(SoundType.WOOD)
                 .noOcclusion()
-                .ignitedByLava());
+                .ignitedByLava()
+                .overrideDescription("block.kaleidoscope_tavern.sandwich_board"));
         this.registerDefaultState(this.stateDefinition.any()
                 .setValue(ROTATION, 0)
                 .setValue(HALF, Half.BOTTOM)
@@ -71,9 +79,13 @@ public class SandwichBoardBlock extends BaseEntityBlock implements SimpleWaterlo
         this.transformItems.forEach(item -> TRANSFORM_MAP.put(item, this));
     }
 
+    public SandwichBoardBlock(Properties properties, List<Item> transformItems) {
+        super(properties);
+        this.transformItems = transformItems;
+    }
+
     @Override
-    public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player,
-                                 InteractionHand hand, BlockHitResult hitResult) {
+    public InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hitResult) {
         Half half = state.getValue(HALF);
         BlockPos clickedPos = half == Half.BOTTOM ? pos : pos.below();
         if (level.getBlockEntity(clickedPos) instanceof SandwichBlockEntity sandwichBlock) {
@@ -88,7 +100,7 @@ public class SandwichBoardBlock extends BaseEntityBlock implements SimpleWaterlo
                         .setValue(WATERLOGGED, state.getValue(WATERLOGGED));
 
                 // 复制 BlockEntity 数据
-                CompoundTag tag = sandwichBlock.saveWithoutMetadata();
+                CompoundTag tag = sandwichBlock.saveWithoutMetadata(level.registryAccess());
 
                 // 设置上下两个部分
                 level.setBlockAndUpdate(clickedPos, transform);
@@ -97,7 +109,8 @@ public class SandwichBoardBlock extends BaseEntityBlock implements SimpleWaterlo
                 // 粘贴 BlockEntity 数据
                 BlockEntity blockEntity = level.getBlockEntity(clickedPos);
                 if (blockEntity instanceof SandwichBlockEntity be) {
-                    be.load(tag);
+                    // loadAdditional 现在接受 ValueInput 而非 CompoundTag
+                    be.loadAdditional(TagValueInput.create(ProblemReporter.DISCARDING, level.registryAccess(), tag));
                     be.refresh();
                 }
 
@@ -112,14 +125,15 @@ public class SandwichBoardBlock extends BaseEntityBlock implements SimpleWaterlo
                 return TextBlockEntity.onItemUse(level, sandwichBlock, player, hand);
             }
         }
-        return super.use(state, level, pos, player, hand, hitResult);
+        return super.useItemOn(stack, state, level, pos, player, hand, hitResult);
     }
 
     @Override
-    public BlockState updateShape(BlockState state, Direction direction, BlockState neighborState,
-                                  LevelAccessor level, BlockPos pos, BlockPos neighborPos) {
+    public BlockState updateShape(BlockState state, LevelReader level, ScheduledTickAccess ticks,
+                                  BlockPos pos, Direction direction, BlockPos neighborPos,
+                                  BlockState neighborState, RandomSource random) {
         if (state.getValue(WATERLOGGED)) {
-            level.scheduleTick(pos, Fluids.WATER, Fluids.WATER.getTickDelay(level));
+            ticks.scheduleTick(pos, Fluids.WATER, Fluids.WATER.getTickDelay(level));
         }
         Half half = state.getValue(HALF);
         boolean isBottom = half == Half.BOTTOM && direction == Direction.UP;
@@ -131,12 +145,12 @@ public class SandwichBoardBlock extends BaseEntityBlock implements SimpleWaterlo
             }
             return Blocks.AIR.defaultBlockState();
         }
-        return super.updateShape(state, direction, neighborState, level, pos, neighborPos);
+        return super.updateShape(state, level, ticks, pos, direction, neighborPos, neighborState, random);
     }
 
     @Override
-    public void playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
-        if (!level.isClientSide && player.isCreative() && state.getValue(HALF) == Half.TOP) {
+    public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
+        if (!level.isClientSide() && player.isCreative() && state.getValue(HALF) == Half.TOP) {
             BlockPos below = pos.below();
             BlockState belowState = level.getBlockState(below);
             if (belowState.is(state.getBlock()) && belowState.getValue(HALF) == Half.BOTTOM) {
@@ -145,7 +159,7 @@ public class SandwichBoardBlock extends BaseEntityBlock implements SimpleWaterlo
                 level.levelEvent(player, LevelEvent.PARTICLES_DESTROY_BLOCK, below, Block.getId(belowState));
             }
         }
-        super.playerWillDestroy(level, pos, state, player);
+        return super.playerWillDestroy(level, pos, state, player);
     }
 
     @Override
@@ -167,10 +181,9 @@ public class SandwichBoardBlock extends BaseEntityBlock implements SimpleWaterlo
     public BlockState getStateForPlacement(BlockPlaceContext context) {
         BlockPos pos = context.getClickedPos();
         Level level = context.getLevel();
-        if (pos.getY() < level.getMaxBuildHeight() - 1 && level.getBlockState(pos.above()).canBeReplaced(context)) {
-            int rotation = RotationSegment.convertToSegment(context.getRotation());
+        if (pos.getY() < level.getMaxY() - 1 && level.getBlockState(pos.above()).canBeReplaced(context)) {
             return this.defaultBlockState()
-                    .setValue(ROTATION, rotation)
+                    .setValue(ROTATION, net.minecraft.world.level.block.state.properties.RotationSegment.convertToSegment(context.getRotation()))
                     .setValue(HALF, Half.BOTTOM)
                     .setValue(WATERLOGGED, level.isWaterAt(pos));
         }
@@ -178,7 +191,7 @@ public class SandwichBoardBlock extends BaseEntityBlock implements SimpleWaterlo
     }
 
     @Override
-    public void setPlacedBy(Level level, BlockPos pos, BlockState state, LivingEntity placer, ItemStack stack) {
+    public void setPlacedBy(Level level, BlockPos pos, BlockState state, @Nullable LivingEntity placer, ItemStack stack) {
         BlockPos above = pos.above();
         BlockState blockState = state.setValue(HALF, Half.TOP)
                 .setValue(WATERLOGGED, level.isWaterAt(above));
@@ -225,19 +238,7 @@ public class SandwichBoardBlock extends BaseEntityBlock implements SimpleWaterlo
     }
 
     @Override
-    public String getDescriptionId() {
-        return "block.kaleidoscope_tavern.sandwich_board";
-    }
-
-    @Override
-    public void appendHoverText(ItemStack stack, @Nullable BlockGetter level, List<Component> tooltip, TooltipFlag flag) {
-        if (this.transformItemNames == null && !this.transformItems.isEmpty()) {
-            this.transformItemNames = this.transformItems.stream()
-                    .map(Item::getDescriptionId)
-                    .toList();
-        }
-        if (this.transformItemNames != null) {
-            this.transformItemNames.forEach(name -> tooltip.add(Component.translatable(name).withStyle(ChatFormatting.GRAY)));
-        }
+    protected MapCodec<? extends BaseEntityBlock> codec() {
+        return CODEC;
     }
 }

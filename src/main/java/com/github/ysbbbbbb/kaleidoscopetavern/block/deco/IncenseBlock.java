@@ -1,16 +1,22 @@
 package com.github.ysbbbbbb.kaleidoscopetavern.block.deco;
 
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.Identifier;
 import com.github.ysbbbbbb.kaleidoscopetavern.blockentity.deco.IncenseBlockEntity;
 import com.github.ysbbbbbb.kaleidoscopetavern.init.ModBlocks;
+import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.particles.ParticleOptions;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
@@ -21,7 +27,6 @@ import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
-import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
@@ -40,6 +45,9 @@ import static net.minecraft.sounds.SoundEvents.STONE_BUTTON_CLICK_ON;
 @SuppressWarnings("deprecation")
 public class IncenseBlock extends HorizontalDirectionalBlock implements EntityBlock {
     private static final VoxelShape SHAPE = Block.box(5, 0, 5, 11, 7, 11);
+    private static final MapCodec<IncenseBlock> CODEC = simpleCodec(p -> new IncenseBlock(p,
+            () -> ParticleTypes.CHERRY_LEAVES, () -> ParticleTypes.CHERRY_LEAVES, -2, 16
+    ));
 
     private static final BooleanProperty POWERED = BlockStateProperties.POWERED;
     private static final BooleanProperty OPEN = BlockStateProperties.OPEN;
@@ -50,17 +58,21 @@ public class IncenseBlock extends HorizontalDirectionalBlock implements EntityBl
     private final double largeParticleYOffset;
     private final double largeParticleYRange;
 
-    public IncenseBlock(Supplier<? extends ParticleOptions> smallParticle,
+    public IncenseBlock(Identifier id, Supplier<? extends ParticleOptions> smallParticle,
                         Supplier<? extends ParticleOptions> largeParticle) {
-        this(smallParticle, largeParticle, -2, 16);
+        this(Properties.of().setId(ResourceKey.create(Registries.BLOCK, id)), smallParticle, largeParticle, -2, 16);
     }
 
-    public IncenseBlock(Supplier<? extends ParticleOptions> smallParticle,
+    public IncenseBlock(Identifier id, Supplier<? extends ParticleOptions> smallParticle,
                         Supplier<? extends ParticleOptions> largeParticle,
                         double largeParticleYOffset,
                         double largeParticleYRange) {
-        super(BlockBehaviour.Properties.of()
-                .instabreak()
+        this(Properties.of().setId(ResourceKey.create(Registries.BLOCK, id)), smallParticle, largeParticle, largeParticleYOffset, largeParticleYRange);
+    }
+
+    private IncenseBlock(Properties properties, Supplier<? extends ParticleOptions> smallParticle,
+                        Supplier<? extends ParticleOptions> largeParticle, double largeParticleYOffset, double largeParticleYRange) {
+        super(properties.instabreak()
                 .noOcclusion()
                 .pushReaction(PushReaction.DESTROY)
                 .sound(SoundType.DECORATED_POT));
@@ -89,19 +101,19 @@ public class IncenseBlock extends HorizontalDirectionalBlock implements EntityBl
     @Override
     @Nullable
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
-        if (!level.isClientSide && state.getValue(OPEN)) {
+        if (!level.isClientSide() && state.getValue(OPEN)) {
             return createTickerHelper(type, ModBlocks.INCENSE_BE.get(), IncenseBlockEntity::serverTick);
         }
         return null;
     }
 
     @Override
-    public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player,
-                                 InteractionHand hand, BlockHitResult hit) {
+    public InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
+                                           Player player, InteractionHand hand, BlockHitResult hitResult) {
         state = state.cycle(OPEN);
         level.setBlock(pos, state, Block.UPDATE_CLIENTS);
         playSound(state, level, pos);
-        return InteractionResult.sidedSuccess(level.isClientSide);
+        return InteractionResult.SUCCESS;
     }
 
     private void playSound(BlockState state, Level level, BlockPos pos) {
@@ -125,8 +137,8 @@ public class IncenseBlock extends HorizontalDirectionalBlock implements EntityBl
     }
 
     @Override
-    public void neighborChanged(BlockState state, Level level, BlockPos pos, Block block, BlockPos fromPos, boolean isMoving) {
-        if (level.isClientSide) {
+    public void neighborChanged(BlockState state, Level level, BlockPos pos, Block block, net.minecraft.world.level.redstone.Orientation orientation, boolean isMoving) {
+        if (level.isClientSide()) {
             return;
         }
         boolean powered = level.hasNeighborSignal(pos);
@@ -178,5 +190,10 @@ public class IncenseBlock extends HorizontalDirectionalBlock implements EntityBl
     @Override
     public @Nullable BlockEntity newBlockEntity(BlockPos pPos, BlockState pState) {
         return new IncenseBlockEntity(pPos, pState);
+    }
+
+    @Override
+    protected MapCodec<? extends HorizontalDirectionalBlock> codec() {
+        return CODEC;
     }
 }

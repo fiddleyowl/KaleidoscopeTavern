@@ -2,9 +2,10 @@ package com.github.ysbbbbbb.kaleidoscopetavern.api.blockentity;
 
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.fluids.FluidType;
-import net.minecraftforge.fluids.capability.templates.FluidTank;
-import net.minecraftforge.items.ItemStackHandler;
+import net.neoforged.neoforge.fluids.FluidType;
+import net.neoforged.neoforge.transfer.access.ItemAccess;
+import net.neoforged.neoforge.transfer.fluid.FluidStacksResourceHandler;
+import net.neoforged.neoforge.transfer.item.ItemStacksResourceHandler;
 
 /**
  * 果盆方块实体的接口，定义果盆的核心交互逻辑。
@@ -27,14 +28,14 @@ public interface IPressingTub {
      * <p>
      * 目前只有一个槽位，用于放置待压榨的食材，最多可容纳一组（64 个）相同物品。
      */
-    ItemStackHandler getItems();
+    ItemStacksResourceHandler getItems();
 
     /**
      * 获取果盆的液体槽。
      * <p>
      * 果盆内只能容纳一种液体，最大容量为 {@value #MAX_FLUID_AMOUNT} 毫桶。
      */
-    FluidTank getFluid();
+    FluidStacksResourceHandler getFluid();
 
     /**
      * 获取果盆当前积累的液体量。
@@ -83,7 +84,7 @@ public interface IPressingTub {
      * @param fallDistance 实体的下落高度，暂无实际用途，预留供后续扩展
      * @return 是否成功完成本次压榨操作
      */
-    boolean press(LivingEntity target, float fallDistance);
+    boolean press(LivingEntity target, double fallDistance);
 
     /**
      * 当液体量积满时，使用容器取出压榨产物，成功返回 {@code true}，失败返回 {@code false}。
@@ -97,5 +98,5 @@ public interface IPressingTub {
      * @param target       执行取出操作的实体，通常为玩家
      * @param carriedStack 实体当前手持的物品，用于校验是否为合法的取出容器
      */
-    boolean getResult(LivingEntity target, ItemStack carriedStack);
+    boolean getResult(LivingEntity target, ItemAccess carriedStack);
 }

@@ -3,7 +3,7 @@ package com.github.ysbbbbbb.kaleidoscopetavern.util;
 import com.github.ysbbbbbb.kaleidoscopetavern.init.tag.TagMod;
 import com.google.common.collect.Maps;
 import net.minecraft.ChatFormatting;
-import net.minecraft.Util;
+import net.minecraft.util.Util;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
 

@@ -12,10 +12,10 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
 
-@Mod.EventBusSubscriber(modid = KaleidoscopeTavern.MOD_ID)
+@EventBusSubscriber(modid = KaleidoscopeTavern.MOD_ID)
 public class IceGrapePlant {
     @SubscribeEvent
     public static void onPlant(PlantGrapeEvent event) {

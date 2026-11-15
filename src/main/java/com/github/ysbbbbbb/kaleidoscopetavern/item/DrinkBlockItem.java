@@ -3,56 +3,43 @@ package com.github.ysbbbbbb.kaleidoscopetavern.item;
 import com.github.ysbbbbbb.kaleidoscopetavern.api.blockentity.IBarrel;
 import com.github.ysbbbbbb.kaleidoscopetavern.block.brew.DrinkBlock;
 import com.github.ysbbbbbb.kaleidoscopetavern.blockentity.brew.DrinkBlockEntity;
-import com.github.ysbbbbbb.kaleidoscopetavern.datamap.data.DrinkEffectData;
-import com.github.ysbbbbbb.kaleidoscopetavern.datamap.resources.DrinkEffectDataReloadListener;
+import com.github.ysbbbbbb.kaleidoscopetavern.datamap.DrinkEffectResolver;
 import com.github.ysbbbbbb.kaleidoscopetavern.init.ModItems;
-import com.google.common.collect.Lists;
-import net.minecraft.advancements.CriteriaTriggers;
 import net.minecraft.core.BlockPos;
-import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.stats.Stats;
-import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.InteractionResultHolder;
-import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.entity.projectile.ThrownPotion;
+import net.minecraft.world.entity.projectile.throwableitemprojectile.ThrownSplashPotion;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.ItemUtils;
-import net.minecraft.world.item.UseAnim;
-import net.minecraft.world.item.alchemy.PotionUtils;
+import net.minecraft.world.item.alchemy.PotionContents;
+import net.minecraft.world.item.component.Consumables;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
+import java.util.Optional;
 
 public class DrinkBlockItem extends BottleBlockItem implements IHasContainer {
-    public DrinkBlockItem(Block block) {
-        super(block, new Properties()
+    public DrinkBlockItem(Identifier id, Block block) {
+        super(block, new Properties().useBlockDescriptionPrefix()
                 .stacksTo(16)
+                .component(DataComponents.CONSUMABLE, Consumables.DEFAULT_DRINK)
+                .setId(ResourceKey.create(Registries.ITEM, id))
                 .craftRemainder(ModItems.EMPTY_BOTTLE.get()));
-    }
-
-    @Override
-    public int getUseDuration(ItemStack stack) {
-        return 32;
-    }
-
-    @Override
-    public UseAnim getUseAnimation(ItemStack stack) {
-        return UseAnim.DRINK;
     }
 
     @Override
@@ -65,19 +52,17 @@ public class DrinkBlockItem extends BottleBlockItem implements IHasContainer {
         BlockState state = level.getBlockState(pos);
         Block self = this.getBlock();
 
-        // 先检查能否添加数量
-        if (player != null && tryIncreaseCount(self, state, level, pos, stack, player)) {
-            return InteractionResult.SUCCESS;
-        }
-
         // 只有潜行时才放置
         if (player == null || player.isShiftKeyDown()) {
+            // 先检查能够添加数量
+            if (player != null && tryIncreaseCount(self, state, level, pos, stack, player)) {
+                return InteractionResult.SUCCESS;
+            }
             return this.place(new BlockPlaceContext(context));
         }
 
         // 否则尝试喝下去
-        InteractionResult result = this.use(level, player, context.getHand()).getResult();
-        return result == InteractionResult.CONSUME ? InteractionResult.CONSUME_PARTIAL : result;
+        return this.use(level, player, context.getHand());
     }
 
     private boolean tryIncreaseCount(Block self, BlockState state, Level level, BlockPos pos, ItemStack stack, Player player) {
@@ -107,108 +92,56 @@ public class DrinkBlockItem extends BottleBlockItem implements IHasContainer {
     }
 
     @Override
-    public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
-        return ItemUtils.startUsingInstantly(level, player, hand);
-    }
-
-    @Override
     public ItemStack finishUsingItem(ItemStack stack, Level level, LivingEntity entity) {
-        if (entity instanceof ServerPlayer serverPlayer) {
-            CriteriaTriggers.CONSUME_ITEM.trigger(serverPlayer, stack);
-            serverPlayer.awardStat(Stats.ITEM_USED.get(this));
-        }
         this.addDrinkEffect(stack, level, entity);
-        if (entity instanceof Player player && !player.isCreative()) {
-            stack.shrink(1);
-        }
+        super.finishUsingItem(stack, level, entity);
         return returnContainerToEntity(stack, level, entity);
     }
 
     protected void addDrinkEffect(ItemStack drink, Level level, LivingEntity entity) {
-        DrinkEffectData effectData = DrinkEffectDataReloadListener.INSTANCE.get(drink.getItem());
-        if (effectData == null) {
-            return;
-        }
-        var effects = effectData.effects();
-        if (effects.isEmpty()) {
+        if (level.isClientSide()) {
             return;
         }
         int brewLevel = BottleBlockItem.getBrewLevel(drink);
-        if (brewLevel < IBarrel.BREWING_STARTED) {
-            return;
-        }
-        brewLevel = Math.min(brewLevel, effects.size());
-        // brew level 从 1 开始，所以要 -1 来获取对应的效果列表
-        for (DrinkEffectData.Entry entry : effects.get(brewLevel - 1)) {
-            if (!level.isClientSide && level.random.nextFloat() < entry.probability()) {
-                MobEffect effect = entry.effect();
-                int amplifier = entry.amplifier();
-                if (effect.isInstantenous()) {
-                    // 瞬时效果直接触发，不通过 addEffect
-                    effect.applyInstantenousEffect(entity, entity, entity, amplifier, 1.0);
-                } else {
-                    // json 里的持续时间是秒，但是内部游戏是 tick，需要转化
-                    int duration = entry.duration() * 20;
-                    MobEffectInstance instance = new MobEffectInstance(effect, duration, amplifier);
-                    entity.addEffect(instance);
-                }
+        var entries = DrinkEffectResolver.entriesFor(level.registryAccess(), drink, brewLevel);
+        for (MobEffectInstance instance : DrinkEffectResolver.rollInstances(entries, level.getRandom())) {
+            if (instance.getEffect().value().isInstantenous() && level instanceof net.minecraft.server.level.ServerLevel serverLevel) {
+                instance.getEffect().value().applyInstantenousEffect(serverLevel, entity, entity, entity, instance.getAmplifier(), 1.0);
+            } else {
+                entity.addEffect(instance);
             }
         }
     }
 
-    public void makeThrownPotion(Level level, double x, double y, double z,
-                                 int brewLevel, @Nullable Entity owner) {
-        this.makeThrownPotion(level, x, y, z, brewLevel, owner, null);
+    public void makeThrownPotion(Level level, double x, double y, double z, int brewLevel, @Nullable Entity owner) {
+        makeThrownPotion(level, x, y, z, brewLevel, owner, net.minecraft.world.phys.Vec3.ZERO);
     }
 
-    public void makeThrownPotion(Level level, double x, double y, double z, int brewLevel,
-                                 @Nullable Entity owner, @Nullable Vec3 movement) {
-        List<MobEffectInstance> instances = this.getEffectInstances(level, brewLevel);
+    public void makeThrownPotion(Level level, double x, double y, double z, int brewLevel, @Nullable Entity owner, net.minecraft.world.phys.Vec3 movement) {
+        if (brewLevel < IBarrel.BREWING_STARTED) {
+            return;
+        }
 
-        // 生成一个投掷药水实体
-        ThrownPotion potion = new ThrownPotion(level, x, y, z);
+        List<MobEffectInstance> instances = DrinkEffectResolver.rollInstances(
+                DrinkEffectResolver.entriesFor(level.registryAccess(), this, brewLevel),
+                level.getRandom()
+        );
+        if (instances.isEmpty()) {
+            return;
+        }
+
+        // 生成投掷药水实体（26.1 使用 ThrownSplashPotion）
+        ItemStack stack = new ItemStack(this);
+        PotionContents contents = new PotionContents(Optional.empty(), Optional.empty(), instances, Optional.empty());
+        stack.set(DataComponents.POTION_CONTENTS, contents);
+
+        ThrownSplashPotion potion = new ThrownSplashPotion(level, x, y + 0.125, z, stack);
         if (owner instanceof LivingEntity livingEntity) {
             potion.setOwner(livingEntity);
         }
 
-        // 给投掷药水实体设置效果，直接用 ItemStack 来设置，因为 ThrownPotion 内部会读取 ItemStack 来生成效果
-        ItemStack stack = new ItemStack(this);
-        PotionUtils.setCustomEffects(stack, instances);
-        potion.setItem(stack);
-
-        if (movement != null) {
-            potion.setDeltaMovement(movement);
-        }
-
+        potion.setDeltaMovement(movement);
         level.addFreshEntity(potion);
-    }
-
-    protected List<MobEffectInstance> getEffectInstances(Level level, int brewLevel) {
-        DrinkEffectData effectData = DrinkEffectDataReloadListener.INSTANCE.get(this);
-        if (effectData == null) {
-            return List.of();
-        }
-        var effects = effectData.effects();
-        if (effects.isEmpty()) {
-            return List.of();
-        }
-        brewLevel = BottleBlockItem.clampBrewLevel(brewLevel);
-        if (brewLevel < IBarrel.BREWING_STARTED) {
-            return List.of();
-        }
-        brewLevel = Math.min(brewLevel, effects.size());
-
-        // brew level 从 1 开始，所以要 -1 来获取对应的效果列表
-        List<MobEffectInstance> instances = Lists.newArrayList();
-        for (DrinkEffectData.Entry entry : effects.get(brewLevel - 1)) {
-            if (level.random.nextFloat() < entry.probability()) {
-                MobEffect effect = entry.effect();
-                int duration = entry.duration() * 20;
-                int amplifier = entry.amplifier();
-                instances.add(new MobEffectInstance(effect, duration, amplifier));
-            }
-        }
-        return instances;
     }
 
     @Override

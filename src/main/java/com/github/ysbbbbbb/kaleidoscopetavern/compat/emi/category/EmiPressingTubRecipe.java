@@ -14,7 +14,7 @@ import dev.emi.emi.api.widget.WidgetHolder;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.item.crafting.Ingredient;
 
@@ -22,16 +22,16 @@ import java.util.List;
 
 public class EmiPressingTubRecipe extends BasicEmiRecipe {
     public static final EmiRecipeCategory CATEGORY = new EmiRecipeCategory(
-            new ResourceLocation(ModRecipes.PRESSING_TUB_RECIPE.toString()),
+            Identifier.parse(ModRecipes.PRESSING_TUB_RECIPE.toString()),
             EmiIngredient.of(Ingredient.of(ModItems.PRESSING_TUB.get()))
     );
 
-    private static final ResourceLocation BG = KaleidoscopeTavern.modLoc("textures/gui/jei/pressing_tub.png");
+    private static final Identifier BG = KaleidoscopeTavern.modLoc("textures/gui/jei/pressing_tub.png");
 
     public static final int WIDTH = 155;
     public static final int HEIGHT = 54;
 
-    public EmiPressingTubRecipe(ResourceLocation id, List<EmiIngredient> inputs, List<EmiStack> outputs) {
+    public EmiPressingTubRecipe(Identifier id, List<EmiIngredient> inputs, List<EmiStack> outputs) {
         super(CATEGORY, id, WIDTH, HEIGHT);
         this.inputs = inputs;
         this.outputs = outputs;
@@ -41,7 +41,8 @@ public class EmiPressingTubRecipe extends BasicEmiRecipe {
         registry.addCategory(CATEGORY);
         registry.addWorkstation(CATEGORY, EmiStack.of(ModItems.PRESSING_TUB.get()));
 
-        registry.getRecipeManager().getAllRecipesFor(ModRecipes.PRESSING_TUB_RECIPE).forEach(recipe -> {
+        registry.getRecipeManager().getAllRecipesFor(ModRecipes.PRESSING_TUB_RECIPE).forEach(holder -> {
+            var recipe = holder.value();
             int needPressCount = IPressingTub.MAX_FLUID_AMOUNT / recipe.getFluidAmount();
             if (needPressCount * recipe.getFluidAmount() < IPressingTub.MAX_FLUID_AMOUNT) {
                 needPressCount++;
@@ -54,7 +55,7 @@ public class EmiPressingTubRecipe extends BasicEmiRecipe {
 
             List<EmiStack> outputs = List.of(EmiStack.of(recipe.getFluid().getBucket()));
 
-            registry.addRecipe(new EmiPressingTubRecipe(recipe.getId(), inputs, outputs));
+            registry.addRecipe(new EmiPressingTubRecipe(holder.id(), inputs, outputs));
         });
     }
 
@@ -62,14 +63,14 @@ public class EmiPressingTubRecipe extends BasicEmiRecipe {
     public void addWidgets(WidgetHolder widgets) {
         widgets.addTexture(BG, 1, 1, WIDTH, HEIGHT, 0, 0);
 
-        widgets.addSlot(inputs.get(0), 32, 13)
+        widgets.addSlot(inputs.getFirst(), 32, 13)
                 .drawBack(false);
 
-        widgets.addSlot(outputs.get(0), 124, 14)
+        widgets.addSlot(outputs.getFirst(), 124, 14)
                 .recipeContext(this)
                 .large(true);
 
-        Component tip = Component.translatable("jei.kaleidoscope_tavern.pressing_tub.need_press_count", inputs.get(0).getAmount());
+        Component tip = Component.translatable("jei.kaleidoscope_tavern.pressing_tub.need_press_count", inputs.getFirst().getAmount());
         FormattedCharSequence sequence = tip.getVisualOrderText();
         Font font = Minecraft.getInstance().font;
         widgets.addText(tip, (WIDTH - font.width(sequence) - 5), 44, 0x555555, false);

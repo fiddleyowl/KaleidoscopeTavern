@@ -25,18 +25,19 @@ public class UpsideDownEffect extends BaseEffect {
     }
 
     @Override
-    public void applyInstantenousEffect(@Nullable Entity source, @Nullable Entity indirectSource,
+    public void applyInstantenousEffect(net.minecraft.server.level.ServerLevel serverLevel, @Nullable Entity source, @Nullable Entity indirectSource,
                                         LivingEntity livingEntity, int amplifier, double health) {
         performEffect(livingEntity);
     }
 
     @Override
-    public void applyEffectTick(LivingEntity livingEntity, int amplifier) {
+    public boolean applyEffectTick(net.minecraft.server.level.ServerLevel serverLevel, LivingEntity livingEntity, int amplifier) {
         performEffect(livingEntity);
+        return true;
     }
 
     @Override
-    public boolean isDurationEffectTick(int duration, int amplifier) {
+    public boolean shouldApplyEffectTickThisTick(int duration, int amplifier) {
         return duration == 1;
     }
 

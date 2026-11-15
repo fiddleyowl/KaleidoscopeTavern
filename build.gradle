@@ -1,60 +1,78 @@
 plugins {
-    id 'eclipse'
+    id 'java-library'
+    id 'maven-publish'
     id 'idea'
-    id 'net.minecraftforge.gradle' version '[6.0.16,6.2)'
-    id 'org.parchmentmc.librarian.forgegradle' version '1.+'
-    id 'org.spongepowered.mixin' version '0.7.+'
+    id 'net.neoforged.moddev' version '2.0.148'
 }
+
+base.archivesName = "kaleidoscopetavern"
 
 group = mod_group_id
 version = mod_version
-archivesBaseName = "kaleidoscopetavern"
 
-java.toolchain.languageVersion = JavaLanguageVersion.of(17)
+java.toolchain.languageVersion = JavaLanguageVersion.of(25)
 
-minecraft {
-    mappings channel: mapping_channel, version: mapping_version
-    accessTransformer = file('src/main/resources/META-INF/accesstransformer.cfg')
-    copyIdeResources = true
+def recipeViewer = providers.gradleProperty('recipeViewer').getOrElse('jei')
+def withCompat = providers.gradleProperty('withCompat').getOrElse('true').toBoolean()
+def includePortTests = providers.gradleProperty('clientSmoke').getOrElse('false').toBoolean() ||
+        gradle.startParameter.taskNames.any { it.toLowerCase(java.util.Locale.ROOT).contains('gametest') }
+if (!(recipeViewer in ['jei', 'rei', 'none'])) throw new GradleException('recipeViewer must be jei, rei or none')
+
+sourceSets {
+    gameTest {
+        compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
+        runtimeClasspath += sourceSets.main.output + sourceSets.main.runtimeClasspath
+    }
+}
+
+neoForge {
+    version = project.neo_version
     runs {
+        client {
+            client()
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+            systemProperty 'kaleidoscope_tavern.client_smoke', providers.gradleProperty('clientSmoke').getOrElse('false')
+            gameDirectory = project.file('run/client')
+        }
+        client2 {
+            client()
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+            programArguments = [
+                    "--username", "tartaric_acid"
+            ]
+            gameDirectory = project.file('run/client2')
+        }
+        server {
+            server()
+            //programArgument '--nogui'
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+            gameDirectory = project.file('run/server')
+        }
+        gameTestServer {
+            type = "gameTestServer"
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+            systemProperty 'kaleidoscope_tavern.port_tests', 'true'
+            gameDirectory = project.file('run/gametest')
+        }
+        data {
+            clientData()
+            programArguments.addAll '--mod', project.mod_id, '--all',
+                    '--output', file('src/generated/resources/').getAbsolutePath(),
+                    '--existing', file('src/main/resources/').getAbsolutePath()
+        }
         configureEach {
-            jvmArgs = [
+            jvmArguments = [
                     "-XX:+IgnoreUnrecognizedVMOptions",
                     "-XX:+AllowEnhancedClassRedefinition"
             ]
-            workingDirectory project.file('run')
-            property 'forge.logging.markers', 'REGISTRIES'
-            property 'forge.logging.console.level', 'debug'
-            property 'mixin.env.remapRefMap', 'true'
-            property 'mixin.env.refMapRemappingFile', "${projectDir}/build/createSrgToMcp/output.srg"
-            // 控制台彩色打印
-            property 'terminal.jline', 'true'
-            mods {
-                "${mod_id}" {
-                    source sourceSets.main
-                }
-            }
+            systemProperty 'forge.logging.markers', 'REGISTRIES'
+            logLevel = org.slf4j.event.Level.DEBUG
         }
-        client {
-            property 'forge.enabledGameTestNamespaces', mod_id
-            workingDirectory project.file('run/client_a')
-        }
-        client2 {
-            parent minecraft.runs.client
-            workingDirectory project.file('run/client_b')
-            args '--username', 'tartaric_acid'
-        }
-        server {
-            property 'forge.enabledGameTestNamespaces', mod_id
-            workingDirectory project.file('run/server')
-            args '--nogui'
-        }
-        gameTestServer {
-            property 'forge.enabledGameTestNamespaces', mod_id
-        }
-        data {
-            workingDirectory project.file('run')
-            args '--mod', mod_id, '--all', '--output', file('src/generated/resources/'), '--existing', file('src/main/resources/')
+    }
+    mods {
+        "${mod_id}" {
+            sourceSet(sourceSets.main)
+            if (includePortTests) sourceSet(sourceSets.gameTest)
         }
     }
 }
@@ -62,15 +80,6 @@ minecraft {
 sourceSets.main.resources {
     srcDir 'src/generated/resources'
     exclude '.cache/**'
-}
-
-mixin {
-    add sourceSets.main, "${mod_id}.refmap.json"
-    config "${mod_id}.mixins.json"
-
-    debug.verbose = true
-    debug.export = true
-    hotSwap = true
 }
 
 repositories {
@@ -81,6 +90,7 @@ repositories {
         url = "https://maven.blamejared.com/"
         content {
             includeGroup "mezz.jei"
+            includeGroup "net.mezzdev.config"
         }
     }
     maven {
@@ -88,6 +98,7 @@ repositories {
         url = "https://modmaven.dev"
         content {
             includeGroup "mezz.jei"
+            includeGroup "net.mezzdev.config"
         }
     }
     maven {
@@ -117,79 +128,49 @@ repositories {
         }
     }
     maven {
-        url = "https://maven.shedaniel.me"
+        url 'https://jitpack.io'
+        content {
+            includeGroup "com.github.rtyley"
+        }
     }
     maven {
         name = "TerraformersMC"
         url = "https://maven.terraformersmc.com/"
     }
-    maven {
-        url = "https://maven.createmod.net"
-        content {
-            includeGroup "net.createmod.ponder"
-            includeGroup "dev.engine-room.flywheel"
-        }
-    }
-    maven {
-        name = "Curios"
-        url = "https://maven.theillusivec4.top/"
-    }
 }
 
 dependencies {
-    minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
-    annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
-
-    // JEI
-    compileOnly fg.deobf("mezz.jei:jei-1.20.1-common-api:${jei_version}")
-    compileOnly fg.deobf("mezz.jei:jei-1.20.1-forge-api:${jei_version}")
-    runtimeOnly fg.deobf("mezz.jei:jei-1.20.1-forge:${jei_version}")
-
-    // REI 前置
-    implementation fg.deobf("me.shedaniel.cloth:cloth-config-forge:11.1.106")
-    implementation fg.deobf("dev.architectury:architectury-forge:9.2.14")
-    // REI API for Forge (ForgeGradle)
-    compileOnly fg.deobf("me.shedaniel:RoughlyEnoughItems-api-forge:12.1.785")
-    compileOnly fg.deobf("me.shedaniel:RoughlyEnoughItems-default-plugin-forge:12.1.785")
-    // runtimeOnly fg.deobf("maven.modrinth:rei:12.1.785+forge-forge,1.20.1")
-
-    // EMI
-    compileOnly fg.deobf("dev.emi:emi-forge:1.1.22+1.20.1:api")
-    // implementation fg.deobf("dev.emi:emi-forge:1.1.22+1.20.1")
-
-    // Jade
-    implementation fg.deobf("maven.modrinth:jade:11.13.1+forge")
-
-    // KubeJS
-//    implementation fg.deobf("dev.latvian.mods:kubejs-forge:2001.6.5-build.16")
-//    implementation fg.deobf("dev.latvian.mods:rhino-forge:2001.2.3-build.10")
-//    runtimeOnly fg.deobf("dev.architectury:architectury-forge:9.2.14")
-//    runtimeOnly fg.deobf("maven.modrinth:probejs:6.0.0")
-
-    runtimeOnly fg.deobf("maven.modrinth:nbtedit-reborn:5.0.3+mc1.20.1")
-    runtimeOnly fg.deobf("maven.modrinth:kiwi:11.5.5")
-
-    // Ponder
-    implementation fg.deobf("net.createmod.ponder:Ponder-Forge-1.20.1:1.0.80")
-    compileOnly fg.deobf("dev.engine-room.flywheel:flywheel-forge-api-1.20.1:1.0.4")
-    runtimeOnly fg.deobf("maven.modrinth:create:1.20.1-6.0.6")
-
-    // Curios
-    compileOnly fg.deobf("top.theillusivec4.curios:curios-forge:${curios_version}:api")
-    runtimeOnly fg.deobf("top.theillusivec4.curios:curios-forge:${curios_version}")
-
-    runtimeOnly fg.deobf("curse.maven:carry-on-274259:4882500")
-
-    // 节气
-    // runtimeOnly fg.deobf("curse.maven:ecliptic-seasons-1118306:6838718")
+    compileOnly "mezz.jei:jei-26.1.2-neoforge-api:29.53.0.115"
+    compileOnly "maven.modrinth:cloth-config:26.1.154+neoforge"
+    compileOnly "maven.modrinth:architectury-api:20.1.17+neoforge"
+    compileOnly "maven.modrinth:rei:26.1.819+neoforge"
+    compileOnly "maven.modrinth:jade:26.1.12+neoforge"
+    compileOnly "net.createmod.ponder:ponder-neoforge:1.0.52+mc26.1.2"
+    compileOnly "maven.modrinth:curios:15.0.0+26.1.2"
+    if (withCompat) {
+        runtimeOnly "maven.modrinth:jade:26.1.12+neoforge"
+        runtimeOnly "net.createmod.ponder:ponder-neoforge:1.0.52+mc26.1.2"
+        runtimeOnly "maven.modrinth:curios:15.0.0+26.1.2"
+    }
+    if (recipeViewer == 'jei') {
+        runtimeOnly "mezz.jei:jei-26.1.2-neoforge:29.53.0.115"
+    } else if (recipeViewer == 'rei') {
+        runtimeOnly "maven.modrinth:cloth-config:26.1.154+neoforge"
+        runtimeOnly "maven.modrinth:architectury-api:20.1.17+neoforge"
+        runtimeOnly "maven.modrinth:rei:26.1.819+neoforge"
+    }
 }
 
-tasks.named('processResources', ProcessResources).configure {
+// EMI has no published NeoForge 26.1.2 API. Preserve the integration sources
+// until a target API is available; never load a 1.21.1 mod into a 26.1.2 game.
+sourceSets.main.java.exclude 'com/github/ysbbbbbb/kaleidoscopetavern/compat/emi/**'
+
+tasks.withType(ProcessResources).configureEach {
     var replaceProperties = [
             minecraft_version      : minecraft_version,
             minecraft_version_range: minecraft_version_range,
-            forge_version          : forge_version,
-            forge_version_range    : forge_version_range,
+            neo_version            : neo_version,
+            neo_version_range      : neo_version_range,
             loader_version_range   : loader_version_range,
             mod_id                 : mod_id,
             mod_name               : mod_name,
@@ -198,10 +179,10 @@ tasks.named('processResources', ProcessResources).configure {
             mod_authors            : mod_authors,
             mod_description        : mod_description
     ]
-
     inputs.properties replaceProperties
-    filesMatching(['META-INF/mods.toml', 'pack.mcmeta']) {
-        expand replaceProperties + [project: project]
+
+    filesMatching(['META-INF/neoforge.mods.toml']) {
+        expand replaceProperties
     }
 }
 
@@ -212,11 +193,10 @@ tasks.named('jar', Jar).configure {
                 "Implementation-Version": "${version}"
         ])
     }
-    finalizedBy 'reobfJar'
 }
 
 tasks.withType(JavaCompile).configureEach {
-    options.encoding = 'UTF-8'
+    options.encoding = "UTF-8"
 }
 
 java {
@@ -228,5 +208,11 @@ idea {
     module {
         downloadSources = true
         downloadJavadoc = true
+    }
+}
+
+tasks.withType(Jar).configureEach {
+    from(['LICENSE-CODE', 'LICENSE-ASSETS', 'NOTICE']) {
+        into 'META-INF'
     }
 }

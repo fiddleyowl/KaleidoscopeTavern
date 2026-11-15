@@ -3,19 +3,19 @@ package com.github.ysbbbbbb.kaleidoscopetavern.datagen.loottable;
 import com.github.ysbbbbbb.kaleidoscopetavern.KaleidoscopeTavern;
 import com.github.ysbbbbbb.kaleidoscopetavern.init.ModBlocks;
 import com.github.ysbbbbbb.kaleidoscopetavern.init.ModItems;
-import net.minecraft.Util;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.data.loot.BlockLootSubProvider;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.flag.FeatureFlags;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.alchemy.Potions;
 import net.minecraft.world.level.ItemLike;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.storage.loot.LootPool;
 import net.minecraft.world.level.storage.loot.LootTable;
 import net.minecraft.world.level.storage.loot.entries.LootItem;
 import net.minecraft.world.level.storage.loot.functions.SetItemCountFunction;
-import net.minecraft.world.level.storage.loot.functions.SetNbtFunction;
+import net.minecraft.world.level.storage.loot.functions.SetPotionFunction;
 import net.minecraft.world.level.storage.loot.predicates.LootItemRandomChanceCondition;
 import net.minecraft.world.level.storage.loot.providers.number.ConstantValue;
 import net.minecraft.world.level.storage.loot.providers.number.NumberProvider;
@@ -27,8 +27,8 @@ import java.util.Set;
 public class BlockLootTables extends BlockLootSubProvider {
     public final Set<Block> knownBlocks = new HashSet<>();
 
-    public BlockLootTables() {
-        super(Set.of(), FeatureFlags.REGISTRY.allFlags());
+    public BlockLootTables(HolderLookup.Provider registries) {
+        super(Set.of(), FeatureFlags.REGISTRY.allFlags(), registries);
     }
 
     @Override
@@ -198,9 +198,7 @@ public class BlockLootTables extends BlockLootSubProvider {
         dropSelf(ModBlocks.FIREFLY_INCENSE.get());
 
         // 杂项瓶子
-        add(ModBlocks.WATER_BOTTLE.get(), this.createItemWithNbtTable(Items.POTION,
-                Util.make(new CompoundTag(), tag -> tag.putString("Potion", "minecraft:water")))
-        );
+        add(ModBlocks.WATER_BOTTLE.get(), this.createWaterBottle());
         dropOther(ModBlocks.HONEY_BOTTLE.get(), Items.HONEY_BOTTLE);
         dropOther(ModBlocks.DRAGON_BREATH_BOTTLE.get(), Items.DRAGON_BREATH);
         dropOther(ModBlocks.XP_BOTTLE.get(), Items.EXPERIENCE_BOTTLE);
@@ -217,7 +215,7 @@ public class BlockLootTables extends BlockLootSubProvider {
         return this.knownBlocks;
     }
 
-    public ResourceLocation modLoc(String name) {
+    public Identifier modLoc(String name) {
         return KaleidoscopeTavern.modLoc(name);
     }
 
@@ -242,12 +240,13 @@ public class BlockLootTables extends BlockLootSubProvider {
         return builder;
     }
 
-    protected LootTable.Builder createItemWithNbtTable(ItemLike item, CompoundTag nbt) {
+    protected LootTable.Builder createWaterBottle() {
         LootTable.Builder builder = LootTable.lootTable();
         LootPool.Builder pool = LootPool.lootPool()
                 .setRolls(ConstantValue.exactly(1))
-                .add(LootItem.lootTableItem(item).apply(SetNbtFunction.setTag(nbt)));
-        builder.withPool(this.applyExplosionCondition(item, pool));
+                .add(LootItem.lootTableItem(Items.POTION)
+                        .apply(SetPotionFunction.setPotion(Potions.WATER)));
+        builder.withPool(this.applyExplosionCondition(Items.POTION, pool));
         return builder;
     }
 

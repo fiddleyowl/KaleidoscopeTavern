@@ -1,6 +1,7 @@
 package com.github.ysbbbbbb.kaleidoscopetavern.compat.jei;
 
 import com.github.ysbbbbbb.kaleidoscopetavern.KaleidoscopeTavern;
+import com.github.ysbbbbbb.kaleidoscopetavern.client.init.ClientRecipeEvent;
 import com.github.ysbbbbbb.kaleidoscopetavern.compat.jei.category.BarrelRecipeCategory;
 import com.github.ysbbbbbb.kaleidoscopetavern.compat.jei.category.PressingTubCategory;
 import com.github.ysbbbbbb.kaleidoscopetavern.compat.jei.category.ShakerRecipeCategory;
@@ -10,11 +11,12 @@ import mezz.jei.api.JeiPlugin;
 import mezz.jei.api.registration.IRecipeCatalystRegistration;
 import mezz.jei.api.registration.IRecipeCategoryRegistration;
 import mezz.jei.api.registration.IRecipeRegistration;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
+import org.jspecify.annotations.NonNull;
 
 @JeiPlugin
 public class ModJeiPlugin implements IModPlugin {
-    private static final ResourceLocation UID = new ResourceLocation(KaleidoscopeTavern.MOD_ID, "jei");
+    private static final Identifier UID = Identifier.fromNamespaceAndPath(KaleidoscopeTavern.MOD_ID, "jei");
 
     @Override
     public void registerCategories(IRecipeCategoryRegistration registration) {
@@ -25,20 +27,21 @@ public class ModJeiPlugin implements IModPlugin {
 
     @Override
     public void registerRecipes(IRecipeRegistration registration) {
-        registration.addRecipes(BarrelRecipeCategory.TYPE, BarrelRecipeCategory.getRecipes());
-        registration.addRecipes(PressingTubCategory.TYPE, PressingTubCategory.getRecipes());
-        registration.addRecipes(ShakerRecipeCategory.TYPE, ShakerRecipeCategory.getRecipes());
+        registration.addRecipes(BarrelRecipeCategory.TYPE, ClientRecipeEvent.BARREL_RECIPES);
+        registration.addRecipes(PressingTubCategory.TYPE, ClientRecipeEvent.PRESSING_TUB_RECIPES);
+        registration.addRecipes(ShakerRecipeCategory.TYPE, ClientRecipeEvent.SHAKER_RECIPES);
     }
 
     @Override
     public void registerRecipeCatalysts(IRecipeCatalystRegistration registration) {
-        registration.addRecipeCatalyst(ModItems.BARREL.get(), BarrelRecipeCategory.TYPE);
-        registration.addRecipeCatalyst(ModItems.PRESSING_TUB.get(), PressingTubCategory.TYPE);
-        registration.addRecipeCatalyst(ModItems.SHAKER.get(), ShakerRecipeCategory.TYPE);
+        registration.addCraftingStation(BarrelRecipeCategory.TYPE, ModItems.BARREL.get());
+        registration.addCraftingStation(PressingTubCategory.TYPE, ModItems.PRESSING_TUB.get());
+        registration.addCraftingStation(ShakerRecipeCategory.TYPE, ModItems.SHAKER.get());
     }
 
     @Override
-    public ResourceLocation getPluginUid() {
+    @NonNull
+    public Identifier getPluginUid() {
         return UID;
     }
 }

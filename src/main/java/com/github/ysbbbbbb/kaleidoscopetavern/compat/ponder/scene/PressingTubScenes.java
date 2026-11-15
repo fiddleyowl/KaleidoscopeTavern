@@ -4,13 +4,13 @@ import com.github.ysbbbbbb.kaleidoscopetavern.block.brew.PressingTubBlock;
 import com.github.ysbbbbbb.kaleidoscopetavern.blockentity.brew.PressingTubBlockEntity;
 import com.github.ysbbbbbb.kaleidoscopetavern.compat.ponder.utils.PonderBlockWrapper;
 import com.github.ysbbbbbb.kaleidoscopetavern.init.ModItems;
-import net.createmod.catnip.math.Pointing;
-import net.createmod.ponder.api.ParticleEmitter;
-import net.createmod.ponder.api.element.ElementLink;
-import net.createmod.ponder.api.element.EntityElement;
-import net.createmod.ponder.api.scene.SceneBuilder;
-import net.createmod.ponder.api.scene.SceneBuildingUtil;
-import net.createmod.ponder.api.scene.Selection;
+import net.createmod.catnip.api.math.Pointing;
+import net.createmod.ponder.api.client.scene.ParticleEmitter;
+import net.createmod.ponder.api.client.element.ElementLink;
+import net.createmod.ponder.api.client.element.EntityElement;
+import net.createmod.ponder.api.client.scene.SceneBuilder;
+import net.createmod.ponder.api.client.scene.SceneBuildingUtil;
+import net.createmod.ponder.api.client.scene.Selection;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.Direction;
 import net.minecraft.core.particles.ItemParticleOption;
@@ -18,14 +18,13 @@ import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MoverType;
-import net.minecraft.world.entity.animal.Pig;
+import net.minecraft.world.entity.animal.pig.Pig;
 import net.minecraft.world.entity.monster.Slime;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.fluids.capability.IFluidHandler;
 
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -69,7 +68,7 @@ public class PressingTubScenes {
         scene.overlay().showControls(tub.blockSurface(Direction.UP), Pointing.DOWN, 20).rightClick();
         scene.idle(5);
         tub.modifyBlockEntity(PressingTubBlockEntity.class, (be) -> {
-            be.getItems().extractItem(0, 1, false);
+            be.getItems().set(0, be.getItems().getResource(0), Math.max(0, (int)be.getItems().getAmountAsLong(0) - 1));
             be.refresh();
         });
         scene.idle(25);
@@ -83,7 +82,7 @@ public class PressingTubScenes {
         scene.overlay().showControls(tub.blockSurface(Direction.UP), Pointing.DOWN, 20).rightClick().whileSneaking();
         scene.idle(5);
         tub.modifyBlockEntity(PressingTubBlockEntity.class, (be) -> {
-            be.getItems().extractItem(0, 64, false);
+            be.getItems().set(0, be.getItems().getResource(0), Math.max(0, (int)be.getItems().getAmountAsLong(0) - 64));
             be.refresh();
         });
         scene.idle(25);
@@ -212,7 +211,7 @@ public class PressingTubScenes {
         }
 
         scene.world().modifyEntity(slime, (e) -> {
-            e.lerpTo(e.getX(), e.getY(), e.getZ(), 0, 0, 6, false);
+            e.moveOrInterpolateTo(0, 0);
         });
         scene.idle(6);
 
@@ -243,7 +242,7 @@ public class PressingTubScenes {
         }
 
         scene.world().modifyEntity(slime, (e) -> {
-            e.lerpTo(e.getX(), e.getY(), e.getZ(), 180, 0, 6, false);
+            e.moveOrInterpolateTo(180, 0);
         });
         scene.idle(6);
 
@@ -252,7 +251,7 @@ public class PressingTubScenes {
         scene.overlay().showControls(tub.blockSurface(Direction.UP), Pointing.DOWN, 20).rightClick().withItem(new ItemStack(Items.BUCKET));
         scene.idle(5);
         tub.modifyBlockEntity(PressingTubBlockEntity.class, (be) -> {
-            be.getFluid().drain(1000, IFluidHandler.FluidAction.EXECUTE);
+            be.getFluid().set(0, be.getFluid().getResource(0), Math.max(0, (int)be.getFluid().getAmountAsLong(0) - 1000));
             be.refresh();
         });
         scene.idle(25);
@@ -321,7 +320,7 @@ public class PressingTubScenes {
         scene.idle(10);
 
         scene.world().modifyEntity(slime, (e) -> {
-            e.lerpTo(e.getX(), e.getY(), e.getZ(), 150, 15, 6, false);
+            e.moveOrInterpolateTo(150, 15);
         });
 
         scene.idle(25);
@@ -416,7 +415,7 @@ public class PressingTubScenes {
         }
 
         scene.idle(1);
-        scene.world().modifyEntity(slime, (e) -> e.lerpTo(e.getX(), e.getY(), e.getZ(), 180, 0, 6, false));
+        scene.world().modifyEntity(slime, (e) -> e.moveOrInterpolateTo(180, 0));
         scene.idle(6);
         speed.set(0D);
 
@@ -445,7 +444,7 @@ public class PressingTubScenes {
         }
 
         scene.idle(1);
-        scene.world().modifyEntity(slime, (e) -> e.lerpTo(e.getX(), e.getY(), e.getZ(), 0, 0, 6, false));
+        scene.world().modifyEntity(slime, (e) -> e.moveOrInterpolateTo(0, 0));
         scene.idle(6);
         scene.idle(20);
 
@@ -457,7 +456,7 @@ public class PressingTubScenes {
         scene.overlay().showControls(tub.blockSurface(Direction.UP), Pointing.DOWN, 20).rightClick();
         scene.idle(5);
         tub.modifyBlockEntity(PressingTubBlockEntity.class, (be) -> {
-            be.getItems().extractItem(0, 64, false);
+            be.getItems().set(0, be.getItems().getResource(0), Math.max(0, (int)be.getItems().getAmountAsLong(0) - 64));
             be.refresh();
         });
         scene.idle(25);
@@ -496,7 +495,7 @@ public class PressingTubScenes {
         }
 
         scene.idle(1);
-        scene.world().modifyEntity(slime, (e) -> e.lerpTo(e.getX(), e.getY(), e.getZ(), 180, 0, 6, false));
+        scene.world().modifyEntity(slime, (e) -> e.moveOrInterpolateTo(180, 0));
         scene.idle(6);
         speed.set(0D);
 
@@ -564,7 +563,7 @@ public class PressingTubScenes {
         double sin = Math.sin(angle);
         double cos = Math.cos(angle);
         Vec3 motion = new Vec3(speed * cos, speed, speed * sin);
-        ParticleEmitter emitter = scene.effects().simpleParticleEmitter(new ItemParticleOption(ParticleTypes.ITEM, itemStack), motion);
+        ParticleEmitter emitter = scene.effects().simpleParticleEmitter(new ItemParticleOption(ParticleTypes.ITEM, net.minecraft.world.item.ItemStackTemplate.fromNonEmptyStack(itemStack)), motion);
         scene.effects().emitParticles(pos, emitter, amount, 1);
     }
 }

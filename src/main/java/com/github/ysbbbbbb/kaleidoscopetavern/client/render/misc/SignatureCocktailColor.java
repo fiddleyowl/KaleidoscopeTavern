@@ -2,19 +2,19 @@ package com.github.ysbbbbbb.kaleidoscopetavern.client.render.misc;
 
 import com.github.ysbbbbbb.kaleidoscopetavern.blockentity.mixology.SignatureCocktailBlockEntity;
 import com.github.ysbbbbbb.kaleidoscopetavern.item.SignatureCocktailBlockItem;
-import net.minecraft.client.color.block.BlockColor;
-import net.minecraft.client.color.item.ItemColor;
+import net.minecraft.client.color.block.BlockTintSource;
+import net.minecraft.client.color.item.ItemTintSource;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.BlockAndTintGetter;
+import net.minecraft.client.renderer.block.BlockAndTintGetter;
 import net.minecraft.world.level.block.state.BlockState;
-import org.jetbrains.annotations.Nullable;
 
 public class SignatureCocktailColor {
-    public static class Block implements BlockColor {
+    public static class Block implements BlockTintSource {
+        @Override public int color(BlockState state) { return -1; }
         @Override
-        public int getColor(BlockState state, @Nullable BlockAndTintGetter level, @Nullable BlockPos pos, int tintIndex) {
-            if (tintIndex != 0 || level == null || pos == null) {
+        public int colorInWorld(BlockState state, BlockAndTintGetter level, BlockPos pos) {
+            if (level == null || pos == null) {
                 return 0xFFFFFF;
             }
             if (level.getBlockEntity(pos) instanceof SignatureCocktailBlockEntity be) {
@@ -24,13 +24,11 @@ public class SignatureCocktailColor {
         }
     }
 
-    public static class Item implements ItemColor {
-        @Override
-        public int getColor(ItemStack stack, int tintIndex) {
-            if (tintIndex != 1) {
-                return 0xFFFFFF;
-            }
-            return SignatureCocktailBlockItem.getColor(stack);
+    public record Item() implements ItemTintSource {
+        public static final com.mojang.serialization.MapCodec<Item> CODEC = com.mojang.serialization.MapCodec.unit(Item::new);
+        @Override public int calculate(ItemStack stack, net.minecraft.client.multiplayer.ClientLevel level, net.minecraft.world.entity.LivingEntity owner) {
+            return 0xFF000000 | SignatureCocktailBlockItem.getColor(stack);
         }
+        @Override public com.mojang.serialization.MapCodec<Item> type() { return CODEC; }
     }
 }

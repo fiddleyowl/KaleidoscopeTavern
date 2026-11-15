@@ -1,9 +1,11 @@
 package com.github.ysbbbbbb.kaleidoscopetavern.block.brew;
 
+import net.minecraft.resources.Identifier;
 import com.github.ysbbbbbb.kaleidoscopetavern.block.AbstractStorageBlock;
 import com.github.ysbbbbbb.kaleidoscopetavern.block.properties.PositionType;
 import com.github.ysbbbbbb.kaleidoscopetavern.blockentity.brew.CellarCabinetBlockEntity;
 import com.github.ysbbbbbb.kaleidoscopetavern.init.tag.TagMod;
+import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.InteractionHand;
@@ -13,8 +15,8 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.HorizontalDirectionalBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
@@ -24,8 +26,18 @@ import org.jetbrains.annotations.Nullable;
 
 @SuppressWarnings("deprecation")
 public class CellarCabinetBlock extends AbstractStorageBlock {
-    public CellarCabinetBlock() {
-        super();
+    private static final MapCodec<CellarCabinetBlock> CODEC = simpleCodec(CellarCabinetBlock::new);
+
+    public CellarCabinetBlock(Properties properties) {
+        super(properties);
+        this.registerDefaultState(this.stateDefinition.any()
+                .setValue(FACING, Direction.NORTH)
+                .setValue(POWERED, false)
+                .setValue(BarCabinetBlock.POSITION, PositionType.SINGLE));
+    }
+
+    public CellarCabinetBlock(Identifier id) {
+        super(id);
         this.registerDefaultState(this.stateDefinition.any()
                 .setValue(FACING, Direction.NORTH)
                 .setValue(POWERED, false)
@@ -33,8 +45,8 @@ public class CellarCabinetBlock extends AbstractStorageBlock {
     }
 
     @Override
-    public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player,
-                                 InteractionHand hand, BlockHitResult hitResult) {
+    protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
+                                              Player player, InteractionHand hand, BlockHitResult hitResult) {
         return super.handleUse(state, level, pos, player, hand, hitResult);
     }
 
@@ -63,20 +75,19 @@ public class CellarCabinetBlock extends AbstractStorageBlock {
     @Override
     protected Vec3 getShootPos(Direction direction, BlockPos pos, int slot) {
         Vec3 center = Vec3.atLowerCornerOf(pos).add(0.5, 0.5, 0.5);
-        Vec3 scale = Vec3.atLowerCornerOf(direction.getNormal()).scale(0.5);
+        Vec3 scale = Vec3.atLowerCornerOf(direction.getUnitVec3i()).scale(0.5);
         return center.add(scale);
     }
 
     @Override
     protected Vec3 getMovement(Direction direction, BlockPos pos, int slot) {
         double factor = Math.random() * 2 + 0.5;
-        Vec3 normal = Vec3.atLowerCornerWithOffset(direction.getNormal(), 0, 0.1, 0);
+        Vec3 normal = Vec3.atLowerCornerWithOffset(direction.getUnitVec3i(), 0, 0.1, 0);
         return normal.scale(factor);
     }
 
     @Override
-    public BlockState updateShape(BlockState state, Direction direction, BlockState neighborState,
-                                  LevelAccessor level, BlockPos pos, BlockPos neighborPos) {
+    public BlockState updateShape(BlockState state, net.minecraft.world.level.LevelReader level, net.minecraft.world.level.ScheduledTickAccess ticks, BlockPos pos, Direction direction, BlockPos neighborPos, BlockState neighborState, net.minecraft.util.RandomSource random) {
         Direction self = state.getValue(FACING);
         Direction left = self.getClockWise();
         Direction right = self.getCounterClockWise();
@@ -114,7 +125,7 @@ public class CellarCabinetBlock extends AbstractStorageBlock {
                 }
             }
         }
-        return super.updateShape(state, direction, neighborState, level, pos, neighborPos);
+        return super.updateShape(state, level, ticks, pos, direction, neighborPos, neighborState, random);
     }
 
     @Override
@@ -161,5 +172,10 @@ public class CellarCabinetBlock extends AbstractStorageBlock {
     @Override
     public float getShadeBrightness(BlockState pState, BlockGetter pLevel, BlockPos pPos) {
         return 0.2F;
+    }
+
+    @Override
+    protected MapCodec<? extends HorizontalDirectionalBlock> codec() {
+        return CODEC;
     }
 }

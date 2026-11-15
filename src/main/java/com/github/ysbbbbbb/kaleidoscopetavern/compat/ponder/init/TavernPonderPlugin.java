@@ -1,11 +1,11 @@
 package com.github.ysbbbbbb.kaleidoscopetavern.compat.ponder.init;
 
 import com.github.ysbbbbbb.kaleidoscopetavern.KaleidoscopeTavern;
-import net.createmod.ponder.api.registration.PonderPlugin;
-import net.createmod.ponder.api.registration.PonderSceneRegistrationHelper;
-import net.createmod.ponder.api.registration.PonderTagRegistrationHelper;
-import net.createmod.ponder.foundation.PonderIndex;
-import net.minecraft.resources.ResourceLocation;
+import net.createmod.ponder.api.client.registration.PonderPlugin;
+import net.createmod.ponder.api.client.registration.PonderSceneRegistrationHelper;
+import net.createmod.ponder.api.client.registration.PonderTagRegistrationHelper;
+import net.createmod.ponder.api.client.PonderIndex;
+import net.minecraft.resources.Identifier;
 
 public class TavernPonderPlugin implements PonderPlugin {
     @Override
@@ -14,12 +14,12 @@ public class TavernPonderPlugin implements PonderPlugin {
     }
 
     @Override
-    public void registerScenes(PonderSceneRegistrationHelper<ResourceLocation> helper) {
+    public void registerScenes(PonderSceneRegistrationHelper<Identifier> helper) {
         TavernPonderScreen.register(helper);
     }
 
     @Override
-    public void registerTags(PonderTagRegistrationHelper<ResourceLocation> helper) {
+    public void registerTags(PonderTagRegistrationHelper<Identifier> helper) {
         TavernPonderTags.register(helper);
     }
 

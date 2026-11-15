@@ -1,5 +1,8 @@
 package com.github.ysbbbbbb.kaleidoscopetavern.block.mixology;
 
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.Identifier;
 import com.github.ysbbbbbb.kaleidoscopetavern.blockentity.mixology.ShakerBlockEntity;
 import com.github.ysbbbbbb.kaleidoscopetavern.init.ModItems;
 import com.github.ysbbbbbb.kaleidoscopetavern.item.ShakerItem;
@@ -27,21 +30,20 @@ import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
-import net.minecraftforge.items.ItemHandlerHelper;
-import net.minecraftforge.items.ItemStackHandler;
+import net.neoforged.neoforge.items.ItemHandlerHelper;
+import net.neoforged.neoforge.items.ItemStackHandler;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
 import static com.github.ysbbbbbb.kaleidoscopetavern.init.tag.TagMod.COCKTAIL_INGREDIENT;
-import static net.minecraft.world.InteractionResult.PASS;
 
 @SuppressWarnings("deprecation")
 public class ShakerBlock extends Block implements EntityBlock {
     private static final VoxelShape SHAPE = Block.box(4, 0, 4, 12, 16, 12);
 
-    public ShakerBlock() {
-        super(Properties.of()
+    public ShakerBlock(Identifier id) {
+        super(Properties.of().setId(ResourceKey.create(Registries.BLOCK, id))
                 .noOcclusion()
                 .instabreak()
                 .pushReaction(PushReaction.DESTROY)
@@ -50,20 +52,20 @@ public class ShakerBlock extends Block implements EntityBlock {
     }
 
     @Override
-    public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player,
-                                 InteractionHand hand, BlockHitResult hitResult) {
+    protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
+                                              Player player, InteractionHand hand, BlockHitResult hitResult) {
         if (hand != InteractionHand.MAIN_HAND) {
-            return PASS;
+            return InteractionResult.TRY_WITH_EMPTY_HAND;
         }
         if (!(level.getBlockEntity(pos) instanceof ShakerBlockEntity shaker)) {
-            return PASS;
+            return InteractionResult.TRY_WITH_EMPTY_HAND;
         }
 
         ItemStack itemInHand = player.getItemInHand(hand);
         // 空手取下
         if (itemInHand.isEmpty() && level instanceof ServerLevel serverLevel) {
             getDrops(state, serverLevel, pos, shaker)
-                    .forEach(stack -> ItemHandlerHelper.giveItemToPlayer(player, stack));
+                    .forEach(s -> ItemHandlerHelper.giveItemToPlayer(player, s));
             level.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_SUPPRESS_DROPS | Block.UPDATE_ALL);
             level.playSound(null, pos, SoundEvents.LANTERN_BREAK, SoundSource.BLOCKS);
             return InteractionResult.SUCCESS;
@@ -73,7 +75,7 @@ public class ShakerBlock extends Block implements EntityBlock {
             shaker.addIngredient(itemInHand, player);
             return InteractionResult.SUCCESS;
         }
-        return PASS;
+        return InteractionResult.TRY_WITH_EMPTY_HAND;
     }
 
     @Override

@@ -3,8 +3,13 @@ package com.github.ysbbbbbb.kaleidoscopetavern.block.brew;
 import com.github.ysbbbbbb.kaleidoscopetavern.blockentity.brew.BarrelBlockEntity;
 import com.github.ysbbbbbb.kaleidoscopetavern.init.ModBlocks;
 import com.github.ysbbbbbb.kaleidoscopetavern.util.FluidUtils;
+import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.LivingEntity;
@@ -20,24 +25,28 @@ import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
-import net.minecraft.world.level.block.state.properties.*;
+import net.minecraft.world.level.block.state.properties.AttachFace;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.block.state.properties.EnumProperty;
+import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraft.world.level.material.MapColor;
 import net.minecraft.world.level.material.PushReaction;
 import net.minecraft.world.level.storage.loot.LootParams;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
-import net.minecraftforge.fluids.FluidStack;
-import net.minecraftforge.fluids.FluidUtil;
+import net.neoforged.neoforge.fluids.FluidStack;
+import net.neoforged.neoforge.transfer.access.ItemAccess;
+import net.neoforged.neoforge.transfer.fluid.FluidUtil;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 
 @SuppressWarnings("deprecation")
 public class BarrelBlock extends BaseEntityBlock {
-    public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
+    public static final MapCodec<BarrelBlock> CODEC = simpleCodec(BarrelBlock::new);
+    public static final EnumProperty<Direction> FACING = BlockStateProperties.HORIZONTAL_FACING;
     /**
      * 对应酒桶的上中下三层
      */
@@ -60,8 +69,9 @@ public class BarrelBlock extends BaseEntityBlock {
 
     private static final AttachFace[] LAYERS = {AttachFace.FLOOR, AttachFace.WALL, AttachFace.CEILING};
 
-    public BarrelBlock() {
+    public BarrelBlock(Identifier id) {
         super(Properties.of()
+                .setId(ResourceKey.create(Registries.BLOCK, id))
                 .mapColor(MapColor.WOOD)
                 .strength(2.5F)
                 .sound(SoundType.WOOD)
@@ -74,9 +84,12 @@ public class BarrelBlock extends BaseEntityBlock {
                 .setValue(INDEX, 4));
     }
 
+    public BarrelBlock(Properties properties) {
+        super(properties);
+    }
+
     @Override
-    public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player,
-                                 InteractionHand hand, BlockHitResult hitResult) {
+    public InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hitResult) {
         if (hand != InteractionHand.MAIN_HAND) {
             return InteractionResult.PASS;
         }
@@ -101,15 +114,16 @@ public class BarrelBlock extends BaseEntityBlock {
 
             // 只有点击中心，才能进行添加物品或流体的交互
             if (clickedLid) {
+                ItemAccess itemAccess = ItemAccess.forPlayerInteraction(player, hand);
                 // 如果拿的是流体容器
-                if (FluidUtils.isFluidContainer(itemInHand)) {
-                    Optional<FluidStack> optional = FluidUtil.getFluidContained(itemInHand);
+                if (FluidUtils.isFluidContainer(itemAccess)) {
+                    FluidStack fluidStack = FluidUtil.getFirstStackContained(itemInHand);
                     // 尝试先从容器中倒出流体到酒桶里，如果成功了就结束了
-                    if (optional.isPresent() && barrelEntity.addFluid(player, itemInHand)) {
+                    if (!fluidStack.isEmpty() && barrelEntity.addFluid(player, itemAccess)) {
                         return InteractionResult.SUCCESS;
                     }
                     // 如果倒出失败了，再尝试从酒桶里装流体到容器里
-                    if (barrelEntity.removeFluid(player, itemInHand)) {
+                    if (barrelEntity.removeFluid(player, itemAccess)) {
                         return InteractionResult.SUCCESS;
                     }
                     // 流体容器不可作为原料输入
@@ -130,7 +144,7 @@ public class BarrelBlock extends BaseEntityBlock {
             barrelEntity.tipBrewInfo(player);
             return InteractionResult.SUCCESS;
         }
-        return super.use(state, level, pos, player, hand, hitResult);
+        return super.useItemOn(stack, state, level, pos, player, hand, hitResult);
     }
 
     /**
@@ -150,7 +164,7 @@ public class BarrelBlock extends BaseEntityBlock {
     @Override
     @Nullable
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> blockEntityType) {
-        if (level.isClientSide) {
+        if (level.isClientSide()) {
             return null;
         }
         return createTickerHelper(blockEntityType, ModBlocks.BARREL_BE.get(),
@@ -164,7 +178,7 @@ public class BarrelBlock extends BaseEntityBlock {
         Level level = context.getLevel();
 
         // 需要 3 格高度
-        if (pos.getY() > level.getMaxBuildHeight() - 3) {
+        if (pos.getY() > level.getMaxY() - 3) {
             return null;
         }
 
@@ -192,7 +206,7 @@ public class BarrelBlock extends BaseEntityBlock {
 
     @Override
     public void setPlacedBy(Level level, BlockPos pos, BlockState state, @Nullable LivingEntity entity, ItemStack stack) {
-        if (level.isClientSide) {
+        if (level.isClientSide()) {
             return;
         }
 
@@ -217,13 +231,13 @@ public class BarrelBlock extends BaseEntityBlock {
     }
 
     @Override
-    public void playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
+    public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
         handleRemove(level, pos, state, player);
-        super.playerWillDestroy(level, pos, state, player);
+        return super.playerWillDestroy(level, pos, state, player);
     }
 
     @Override
-    public void onBlockExploded(BlockState state, Level level, BlockPos pos, Explosion explosion) {
+    public void onBlockExploded(BlockState state, ServerLevel level, BlockPos pos, Explosion explosion) {
         handleRemove(level, pos, state, null);
         super.onBlockExploded(state, level, pos, explosion);
     }
@@ -254,7 +268,7 @@ public class BarrelBlock extends BaseEntityBlock {
     }
 
     private static void handleRemove(Level level, BlockPos pos, BlockState state, @Nullable Player player) {
-        if (level.isClientSide) {
+        if (level.isClientSide()) {
             return;
         }
 
@@ -317,7 +331,7 @@ public class BarrelBlock extends BaseEntityBlock {
         AttachFace layer = state.getValue(LAYER);
         int index = state.getValue(INDEX);
         if (layer == AttachFace.FLOOR && index == 4) {
-            return RenderShape.ENTITYBLOCK_ANIMATED;
+            return RenderShape.MODEL;
         }
         return RenderShape.INVISIBLE;
     }
@@ -330,5 +344,10 @@ public class BarrelBlock extends BaseEntityBlock {
     @Override
     public BlockState mirror(BlockState state, Mirror mirror) {
         return state.rotate(mirror.getRotation(state.getValue(FACING)));
+    }
+
+    @Override
+    protected MapCodec<? extends BaseEntityBlock> codec() {
+        return CODEC;
     }
 }

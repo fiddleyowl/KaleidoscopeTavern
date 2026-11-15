@@ -12,25 +12,25 @@ import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.food.FoodData;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.event.entity.living.LivingDeathEvent;
-import net.minecraftforge.event.entity.living.LivingHurtEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
+import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
+import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import org.jetbrains.annotations.Nullable;
 
-@Mod.EventBusSubscriber(modid = KaleidoscopeTavern.MOD_ID)
+@EventBusSubscriber(modid = KaleidoscopeTavern.MOD_ID)
 public class EffectEvent {
     @SubscribeEvent
     public static void onLivingDeath(LivingDeathEvent event) {
-        if (event.getEntity().level().isClientSide) {
+        if (event.getEntity().level().isClientSide()) {
             return;
         }
 
         LivingEntity target = event.getEntity();
         @Nullable Entity source = event.getSource().getEntity();
 
-        if (!(source instanceof LivingEntity living) || !living.hasEffect(ModEffects.BLOODY_MARY.get())) {
+        if (!(source instanceof LivingEntity living) || !living.hasEffect(ModEffects.BLOODY_MARY)) {
             return;
         }
         if (target == living) {
@@ -46,18 +46,18 @@ public class EffectEvent {
      * 摸金校尉：攻击指定类型的生物时，有 30% 概率将目标主手物品耐久降至 1 后卸下掉落。
      */
     @SubscribeEvent
-    public static void onLivingHurt(LivingHurtEvent event) {
-        if (event.getEntity().level().isClientSide) {
+    public static void onLivingHurt(LivingDamageEvent.Pre event) {
+        if (event.getEntity().level().isClientSide()) {
             return;
         }
 
         @Nullable Entity source = event.getSource().getEntity();
-        if (!(source instanceof LivingEntity attacker) || !attacker.hasEffect(ModEffects.TOMB_RAIDER.get())) {
+        if (!(source instanceof LivingEntity attacker) || !attacker.hasEffect(ModEffects.TOMB_RAIDER)) {
             return;
         }
 
         LivingEntity target = event.getEntity();
-        if (!target.getType().is(TagMod.TOMB_RAIDER_DISARMABLE)) {
+        if (!target.getType().builtInRegistryHolder().is(TagMod.TOMB_RAIDER_DISARMABLE)) {
             return;
         }
 
@@ -90,16 +90,13 @@ public class EffectEvent {
      * 此处在 PlayerTickEvent 中安全执行移除。
      */
     @SubscribeEvent
-    public static void onPlayerTick(TickEvent.PlayerTickEvent event) {
-        if (event.phase != TickEvent.Phase.END) {
-            return;
-        }
-        Player player = event.player;
+    public static void onPlayerTick(PlayerTickEvent.Post event) {
+        Player player = event.getEntity();
         if (player.level().isClientSide()) {
             return;
         }
 
-        MobEffectInstance ardentHeat = player.getEffect(ModEffects.ARDENT_HEAT.get());
+        MobEffectInstance ardentHeat = player.getEffect(ModEffects.ARDENT_HEAT);
         if (ardentHeat == null) {
             return;
         }
@@ -107,7 +104,7 @@ public class EffectEvent {
         // 饥饿值和饱和度都耗尽时，立刻移除醇热并给予 30 秒饥饿
         FoodData food = player.getFoodData();
         if (food.getFoodLevel() <= 0 && food.getSaturationLevel() <= 0.01F) {
-            player.removeEffect(ModEffects.ARDENT_HEAT.get());
+            player.removeEffect(ModEffects.ARDENT_HEAT);
             player.addEffect(new MobEffectInstance(MobEffects.HUNGER, 600, 0));
         }
     }

@@ -2,7 +2,6 @@ package com.github.ysbbbbbb.kaleidoscopetavern.client.animation;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.animation.AnimationChannel;
 import net.minecraft.client.animation.AnimationDefinition;
 import net.minecraft.client.animation.Keyframe;
@@ -14,7 +13,9 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.client.extensions.common.IClientItemExtensions;
+import net.neoforged.fml.common.asm.enumextension.EnumProxy;
+import net.neoforged.neoforge.client.IArmPoseTransformer;
+import net.neoforged.neoforge.client.extensions.common.IClientItemExtensions;
 
 public class ShakerAnimation {
     public static final AnimationDefinition PUT = AnimationDefinition.Builder.withLength(0.375F)
@@ -38,13 +39,13 @@ public class ShakerAnimation {
                     new Keyframe(0.375F, KeyframeAnimations.posVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM)
             )).build();
 
-    public static final HumanoidModel.ArmPose SHAKING = HumanoidModel.ArmPose.create("KT_SHAKING", false,
-            (model, entity, arm) -> {
-                int remainingTicks = entity.getUseItemRemainingTicks();
-                if (remainingTicks == 0) {
+    public static final EnumProxy<HumanoidModel.ArmPose> SHAKING = new EnumProxy<>(HumanoidModel.ArmPose.class, false, false,
+            (IArmPoseTransformer) (model, entity, arm) -> {
+                boolean using = entity.isUsingItem;
+                if (!using) {
                     return;
                 }
-                float totalTicks = entity.tickCount + Minecraft.getInstance().getPartialTick();
+                float totalTicks = entity.ageInTicks;
                 float rot = (float) Math.sin(totalTicks * 1.5f) * 0.25f;
                 if (arm == HumanoidArm.RIGHT) {
                     model.rightArm.xRot = 1.375f * Mth.PI - Mth.PI * rot;
@@ -59,7 +60,7 @@ public class ShakerAnimation {
         @Override
         public HumanoidModel.ArmPose getArmPose(LivingEntity entity, InteractionHand hand, ItemStack stack) {
             if (!stack.isEmpty()) {
-                return SHAKING;
+                return SHAKING.getValue();
             }
             return HumanoidModel.ArmPose.EMPTY;
         }

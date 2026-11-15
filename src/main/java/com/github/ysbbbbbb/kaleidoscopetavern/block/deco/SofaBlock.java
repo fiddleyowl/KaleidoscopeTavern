@@ -2,16 +2,20 @@ package com.github.ysbbbbbb.kaleidoscopetavern.block.deco;
 
 import com.github.ysbbbbbb.kaleidoscopetavern.block.properties.ConnectionType;
 import com.github.ysbbbbbb.kaleidoscopetavern.entity.SitEntity;
+import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
-import net.minecraft.world.level.BlockGetter;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.level.LevelAccessor;
+import net.minecraft.world.level.*;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.HorizontalDirectionalBlock;
 import net.minecraft.world.level.block.SimpleWaterloggedBlock;
@@ -35,6 +39,7 @@ import java.util.List;
 
 @SuppressWarnings("deprecation")
 public class SofaBlock extends HorizontalDirectionalBlock implements SimpleWaterloggedBlock, IConnectionBlock {
+    public static final MapCodec<SofaBlock> CODEC = simpleCodec(SofaBlock::new);
     public static final BooleanProperty WATERLOGGED = BlockStateProperties.WATERLOGGED;
 
     // 普通情况
@@ -68,8 +73,9 @@ public class SofaBlock extends HorizontalDirectionalBlock implements SimpleWater
     public static final VoxelShape EAST_LEFT_CORNER_SHAPE = Shapes.or(EAST_SHAPE, Block.box(0, 8, 11, 16, 18, 16));
     public static final VoxelShape EAST_RIGHT_CORNER_SHAPE = Shapes.or(EAST_SHAPE, Block.box(0, 8, 0, 16, 18, 5));
 
-    public SofaBlock() {
+    public SofaBlock(Identifier id) {
         super(Properties.of()
+                .setId(ResourceKey.create(Registries.BLOCK, id))
                 .mapColor(MapColor.WOOL)
                 .instrument(NoteBlockInstrument.GUITAR)
                 .strength(0.8F)
@@ -82,19 +88,24 @@ public class SofaBlock extends HorizontalDirectionalBlock implements SimpleWater
                 .setValue(WATERLOGGED, false));
     }
 
+    public SofaBlock(Properties properties) {
+        super(properties);
+    }
+
     @Override
     public boolean sameType(BlockState state) {
         return state.getBlock() instanceof SofaBlock;
     }
 
     @Override
-    public BlockState updateShape(BlockState state, Direction direction, BlockState neighborState,
-                                  LevelAccessor level, BlockPos pos, BlockPos neighborPos) {
+    public BlockState updateShape(BlockState state, LevelReader level, ScheduledTickAccess ticks,
+                                  BlockPos pos, Direction direction, BlockPos neighborPos,
+                                  BlockState neighborState, RandomSource random) {
         if (state.getValue(WATERLOGGED)) {
-            level.scheduleTick(pos, Fluids.WATER, Fluids.WATER.getTickDelay(level));
+            ticks.scheduleTick(pos, Fluids.WATER, Fluids.WATER.getTickDelay(level));
         }
         state = this.updateShape(level, pos, state, direction);
-        return super.updateShape(state, direction, neighborState, level, pos, neighborPos);
+        return super.updateShape(state, level, ticks, pos, direction, neighborPos, neighborState, random);
     }
 
     @Override
@@ -118,20 +129,21 @@ public class SofaBlock extends HorizontalDirectionalBlock implements SimpleWater
     }
 
     @Override
-    public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hitResult) {
-        if (!level.isClientSide) {
+    public InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
+                                       Player player, InteractionHand hand, BlockHitResult hitResult) {
+        if (!level.isClientSide()) {
             List<SitEntity> entities = level.getEntitiesOfClass(SitEntity.class, new AABB(pos));
             if (entities.isEmpty()) {
                 SitEntity entitySit = new SitEntity(level, pos, 0.5125);
                 entitySit.setYRot(state.getValue(FACING).toYRot());
                 level.addFreshEntity(entitySit);
-                player.startRiding(entitySit, true);
+                player.startRiding(entitySit, true, true);
                 return InteractionResult.SUCCESS;
             }
         } else {
             // todo-check
             // 不知有无炸弹:(, 但这样能够将抱着的生物（使用 carryOn 模组）放置在方块上，而不是抱着生物坐在凳子上
-            return InteractionResult.sidedSuccess(true);
+            return InteractionResult.SUCCESS;
         }
 
         return InteractionResult.PASS;
@@ -177,5 +189,10 @@ public class SofaBlock extends HorizontalDirectionalBlock implements SimpleWater
                 default -> EAST_SHAPE;
             };
         }
+    }
+
+    @Override
+    protected MapCodec<? extends HorizontalDirectionalBlock> codec() {
+        return CODEC;
     }
 }

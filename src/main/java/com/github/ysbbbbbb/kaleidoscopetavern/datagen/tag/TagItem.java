@@ -1,23 +1,23 @@
 package com.github.ysbbbbbb.kaleidoscopetavern.datagen.tag;
 
+import net.minecraft.world.item.Items;
 import com.github.ysbbbbbb.kaleidoscopetavern.KaleidoscopeTavern;
 import com.github.ysbbbbbb.kaleidoscopetavern.init.ModItems;
 import com.github.ysbbbbbb.kaleidoscopetavern.init.tag.TagCommon;
 import com.github.ysbbbbbb.kaleidoscopetavern.init.tag.TagMod;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.data.PackOutput;
-import net.minecraft.data.tags.ItemTagsProvider;
-import net.minecraft.world.item.Items;
+import net.minecraft.data.tags.TagsProvider;
 import net.minecraft.world.level.block.Block;
-import net.minecraftforge.common.data.ExistingFileHelper;
-import org.jetbrains.annotations.Nullable;
+import net.neoforged.neoforge.common.data.ItemTagsProvider;
 
 import java.util.concurrent.CompletableFuture;
 
 public class TagItem extends ItemTagsProvider {
-    public TagItem(PackOutput pOutput, CompletableFuture<HolderLookup.Provider> pLookupProvider,
-                   CompletableFuture<TagLookup<Block>> pBlockTags, @Nullable ExistingFileHelper existingFileHelper) {
-        super(pOutput, pLookupProvider, pBlockTags, KaleidoscopeTavern.MOD_ID, existingFileHelper);
+    public TagItem(PackOutput output, CompletableFuture<HolderLookup.Provider> lookup,
+                   CompletableFuture<TagsProvider.TagLookup<Block>> contentsGetter
+    ) {
+        super(output, lookup, KaleidoscopeTavern.MOD_ID);
     }
 
     @Override

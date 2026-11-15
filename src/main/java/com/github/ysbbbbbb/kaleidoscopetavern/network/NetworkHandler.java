@@ -2,49 +2,36 @@ package com.github.ysbbbbbb.kaleidoscopetavern.network;
 
 import com.github.ysbbbbbb.kaleidoscopetavern.KaleidoscopeTavern;
 import com.github.ysbbbbbb.kaleidoscopetavern.network.message.ClearShakerC2SMessage;
-import com.github.ysbbbbbb.kaleidoscopetavern.network.message.DrinkEffectSyncS2CMessage;
 import com.github.ysbbbbbb.kaleidoscopetavern.network.message.TextOpenS2CMessage;
 import com.github.ysbbbbbb.kaleidoscopetavern.network.message.TextUpdateC2SMessage;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
-import net.minecraftforge.network.NetworkDirection;
-import net.minecraftforge.network.NetworkRegistry;
-import net.minecraftforge.network.PacketDistributor;
-import net.minecraftforge.network.simple.SimpleChannel;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.client.network.ClientPacketDistributor;
+import net.neoforged.neoforge.network.PacketDistributor;
+import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
+import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 
-import java.util.Optional;
-
+@EventBusSubscriber(modid = KaleidoscopeTavern.MOD_ID)
 public class NetworkHandler {
-    private static final String VERSION = "1.0.0";
+    @SubscribeEvent
+    public static void onRegisterPayloadHandlers(RegisterPayloadHandlersEvent event) {
+        PayloadRegistrar registrar = event.registrar(KaleidoscopeTavern.MOD_ID).versioned("1.0.0");
 
-    public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(KaleidoscopeTavern.modLoc("network"),
-            () -> VERSION, it -> it.equals(VERSION), it -> it.equals(VERSION));
-
-    public static void init() {
-        CHANNEL.registerMessage(0, TextUpdateC2SMessage.class,
-                TextUpdateC2SMessage::encode, TextUpdateC2SMessage::decode,
-                TextUpdateC2SMessage::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
-
-        CHANNEL.registerMessage(1, TextOpenS2CMessage.class,
-                TextOpenS2CMessage::encode, TextOpenS2CMessage::decode,
-                TextOpenS2CMessage::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
-
-        CHANNEL.registerMessage(2, ClearShakerC2SMessage.class,
-                ClearShakerC2SMessage::encode, ClearShakerC2SMessage::decode,
-                ClearShakerC2SMessage::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
-
-        CHANNEL.registerMessage(3, DrinkEffectSyncS2CMessage.class,
-                DrinkEffectSyncS2CMessage::encode, DrinkEffectSyncS2CMessage::decode,
-                DrinkEffectSyncS2CMessage::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        registrar.playToServer(TextUpdateC2SMessage.TYPE, TextUpdateC2SMessage.STREAM_CODEC, TextUpdateC2SMessage::handle);
+        registrar.playToClient(TextOpenS2CMessage.TYPE, TextOpenS2CMessage.STREAM_CODEC, TextOpenS2CMessage::handle);
+        registrar.playToServer(ClearShakerC2SMessage.TYPE, ClearShakerC2SMessage.STREAM_CODEC, ClearShakerC2SMessage::handle);
     }
 
-    public static void sendToClient(Player player, Object packet) {
+    public static void sendToClient(Player player, CustomPacketPayload packet) {
         if (player instanceof ServerPlayer serverPlayer) {
-            CHANNEL.send(PacketDistributor.PLAYER.with(() -> serverPlayer), packet);
+            PacketDistributor.sendToPlayer(serverPlayer, packet);
         }
     }
 
-    public static void sendToServer(Object packet) {
-        CHANNEL.sendToServer(packet);
+    public static void sendToServer(CustomPacketPayload packet) {
+        ClientPacketDistributor.sendToServer(packet);
     }
 }

@@ -5,8 +5,8 @@ import com.github.ysbbbbbb.kaleidoscopetavern.network.NetworkHandler;
 import com.github.ysbbbbbb.kaleidoscopetavern.network.message.TextOpenS2CMessage;
 import com.github.ysbbbbbb.kaleidoscopetavern.util.TextAlignment;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -17,6 +17,8 @@ import net.minecraft.world.item.*;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import org.apache.commons.lang3.StringUtils;
 
 import javax.annotation.Nullable;
@@ -77,7 +79,7 @@ public abstract class TextBlockEntity extends BaseBlockEntity {
 
         // 染料
         if (itemInHand.getItem() instanceof DyeItem dyeItem) {
-            DyeColor newColor = dyeItem.getDyeColor();
+            DyeColor newColor = dyeItem.components().getOrDefault(DataComponents.DYE, DyeColor.WHITE);
             if (newColor != textBlock.getColor()) {
                 textBlock.setColor(newColor);
                 textBlock.refresh();
@@ -134,7 +136,7 @@ public abstract class TextBlockEntity extends BaseBlockEntity {
             return InteractionResult.SUCCESS;
         }
 
-        if (!level.isClientSide) {
+        if (!level.isClientSide()) {
             NetworkHandler.sendToClient(player, new TextOpenS2CMessage(pos));
         }
         return InteractionResult.SUCCESS;
@@ -148,23 +150,23 @@ public abstract class TextBlockEntity extends BaseBlockEntity {
     public abstract int getMaxTextLength();
 
     @Override
-    public void load(CompoundTag tag) {
-        super.load(tag);
-        this.text = tag.getString("text");
-        this.color = DyeColor.byId(tag.getInt("color"));
-        this.textAlignment = TextAlignment.byId(tag.getInt("text_alignment"));
-        this.isWaxed = tag.getBoolean("is_waxed");
-        this.isGlowing = tag.getBoolean("is_glowing");
+    public void loadAdditional(ValueInput input) {
+        super.loadAdditional(input);
+        this.text = input.getStringOr("text", StringUtils.EMPTY);
+        this.color = DyeColor.byId(input.getIntOr("color", DyeColor.WHITE.getId()));
+        this.textAlignment = TextAlignment.byId(input.getIntOr("text_alignment", TextAlignment.CENTER.getId()));
+        this.isWaxed = input.getBooleanOr("is_waxed", false);
+        this.isGlowing = input.getBooleanOr("is_glowing", false);
     }
 
     @Override
-    protected void saveAdditional(CompoundTag tag) {
-        super.saveAdditional(tag);
-        tag.putString("text", this.text);
-        tag.putInt("color", this.color.getId());
-        tag.putInt("text_alignment", this.textAlignment.getId());
-        tag.putBoolean("is_waxed", this.isWaxed);
-        tag.putBoolean("is_glowing", this.isGlowing);
+    protected void saveAdditional(ValueOutput output) {
+        super.saveAdditional(output);
+        output.putString("text", this.text);
+        output.putInt("color", this.color.getId());
+        output.putInt("text_alignment", this.textAlignment.getId());
+        output.putBoolean("is_waxed", this.isWaxed);
+        output.putBoolean("is_glowing", this.isGlowing);
     }
 
     public boolean playerIsTooFarAwayToEdit(UUID id) {

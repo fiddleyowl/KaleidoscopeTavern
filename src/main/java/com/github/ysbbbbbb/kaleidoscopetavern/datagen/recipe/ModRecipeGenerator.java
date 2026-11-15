@@ -1,28 +1,47 @@
 package com.github.ysbbbbbb.kaleidoscopetavern.datagen.recipe;
 
 import com.google.common.collect.Lists;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.data.PackOutput;
-import net.minecraft.data.recipes.FinishedRecipe;
+import net.minecraft.data.recipes.RecipeOutput;
+import net.minecraft.data.recipes.RecipeProvider;
 
 import java.util.List;
-import java.util.function.Consumer;
+import java.util.concurrent.CompletableFuture;
 
 public class ModRecipeGenerator extends ModRecipeProvider {
     private final List<ModRecipeProvider> providers = Lists.newArrayList();
 
-    public ModRecipeGenerator(PackOutput output) {
-        super(output);
-        providers.add(new PressingTubRecipeProvider(output));
-        providers.add(new BarrelRecipeProvider(output));
-        providers.add(new ShapedRecipeProvider(output));
-        providers.add(new ShapelessRecipeProvider(output));
-        providers.add(new ShakerRecipeProvider(output));
+    public ModRecipeGenerator(HolderLookup.Provider registries, RecipeOutput output) {
+        super(registries, output);
+        providers.add(new PressingTubRecipeProvider(registries, output));
+        providers.add(new BarrelRecipeProvider(registries, output));
+        providers.add(new ShapedRecipeProvider(registries, output));
+        providers.add(new ShapelessRecipeProvider(registries, output));
+        providers.add(new ShakerRecipeProvider(registries, output));
     }
 
     @Override
-    public void buildRecipes(Consumer<FinishedRecipe> consumer) {
+    protected void buildRecipes() {
         for (ModRecipeProvider provider : providers) {
-            provider.buildRecipes(consumer);
+            provider.buildRecipes();
+        }
+    }
+
+    @SuppressWarnings("all")
+    public static class Runner extends RecipeProvider.Runner {
+        public Runner(PackOutput packOutput, CompletableFuture<HolderLookup.Provider> registries) {
+            super(packOutput, registries);
+        }
+
+        @Override
+        protected RecipeProvider createRecipeProvider(HolderLookup.Provider registries, RecipeOutput output) {
+            return new ModRecipeGenerator(registries, output);
+        }
+
+        @Override
+        public String getName() {
+            return "kaleidoscope Tavern Recipes";
         }
     }
 }

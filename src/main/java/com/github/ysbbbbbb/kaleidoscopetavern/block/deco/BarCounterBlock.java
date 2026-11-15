@@ -1,10 +1,16 @@
 package com.github.ysbbbbbb.kaleidoscopetavern.block.deco;
 
 import com.github.ysbbbbbb.kaleidoscopetavern.block.properties.ConnectionType;
+import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.context.BlockPlaceContext;
-import net.minecraft.world.level.LevelAccessor;
+import net.minecraft.world.level.LevelReader;
+import net.minecraft.world.level.ScheduledTickAccess;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.HorizontalDirectionalBlock;
 import net.minecraft.world.level.block.SoundType;
@@ -16,8 +22,11 @@ import org.jetbrains.annotations.Nullable;
 
 @SuppressWarnings("deprecation")
 public class BarCounterBlock extends HorizontalDirectionalBlock implements IConnectionBlock {
-    public BarCounterBlock() {
+    public static final MapCodec<BarCounterBlock> CODEC = simpleCodec(BarCounterBlock::new);
+
+    public BarCounterBlock(Identifier id) {
         super(Properties.of()
+                .setId(ResourceKey.create(Registries.BLOCK, id))
                 .mapColor(MapColor.COLOR_BLACK)
                 .instrument(NoteBlockInstrument.GUITAR)
                 .strength(0.8F)
@@ -28,16 +37,21 @@ public class BarCounterBlock extends HorizontalDirectionalBlock implements IConn
                 .setValue(CONNECTION, ConnectionType.SINGLE));
     }
 
+    public BarCounterBlock(Properties properties) {
+        super(properties);
+    }
+
     @Override
     public boolean sameType(BlockState state) {
         return state.getBlock() instanceof BarCounterBlock;
     }
 
     @Override
-    public BlockState updateShape(BlockState state, Direction direction, BlockState neighborState,
-                                  LevelAccessor level, BlockPos pos, BlockPos neighborPos) {
+    public BlockState updateShape(BlockState state, LevelReader level, ScheduledTickAccess ticks,
+                                  BlockPos pos, Direction direction, BlockPos neighborPos,
+                                  BlockState neighborState, RandomSource random) {
         state = this.updateShape(level, pos, state, direction);
-        return super.updateShape(state, direction, neighborState, level, pos, neighborPos);
+        return super.updateShape(state, level, ticks, pos, direction, neighborPos, neighborState, random);
     }
 
     @Override
@@ -53,5 +67,10 @@ public class BarCounterBlock extends HorizontalDirectionalBlock implements IConn
         return this.defaultBlockState()
                 .setValue(FACING, direction)
                 .setValue(CONNECTION, connectionType);
+    }
+
+    @Override
+    protected MapCodec<? extends HorizontalDirectionalBlock> codec() {
+        return CODEC;
     }
 }

@@ -6,8 +6,12 @@ import com.github.ysbbbbbb.kaleidoscopetavern.init.ModBlocks;
 import com.github.ysbbbbbb.kaleidoscopetavern.init.ModItems;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
@@ -16,7 +20,8 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.LevelAccessor;
+import net.minecraft.world.level.LevelReader;
+import net.minecraft.world.level.ScheduledTickAccess;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.LevelEvent;
 import net.minecraft.world.level.block.SimpleWaterloggedBlock;
@@ -32,8 +37,8 @@ import net.minecraft.world.level.material.MapColor;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
-import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.common.ToolActions;
+import net.neoforged.neoforge.common.ItemAbilities;
+import net.neoforged.neoforge.common.NeoForge;
 import org.jetbrains.annotations.Nullable;
 
 import static com.github.ysbbbbbb.kaleidoscopetavern.block.plant.ITrellis.*;
@@ -43,8 +48,9 @@ public class TrellisBlock extends Block implements SimpleWaterloggedBlock, ITrel
     public static final BooleanProperty WATERLOGGED = BlockStateProperties.WATERLOGGED;
     public static final BooleanProperty WAXED = BooleanProperty.create("waxed");
 
-    public TrellisBlock() {
+    public TrellisBlock(Identifier id) {
         super(Properties.of()
+                .setId(ResourceKey.create(Registries.BLOCK, id))
                 .mapColor(MapColor.WOOD)
                 .instrument(NoteBlockInstrument.GUITAR)
                 .strength(0.8F)
@@ -57,12 +63,16 @@ public class TrellisBlock extends Block implements SimpleWaterloggedBlock, ITrel
                 .setValue(WATERLOGGED, false));
     }
 
+    public TrellisBlock(Properties properties) {
+        super(properties);
+    }
+
     @Override
-    public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player,
-                                 InteractionHand hand, BlockHitResult hitResult) {
+    public InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
+                                       Player player, InteractionHand hand, BlockHitResult hitResult) {
         // 打蜡与去除
         boolean waxed = state.getValue(WAXED);
-        if (waxed && player.getItemInHand(hand).canPerformAction(ToolActions.AXE_WAX_OFF)) {
+        if (waxed && player.getItemInHand(hand).canPerformAction(ItemAbilities.AXE_WAX_OFF)) {
             level.setBlockAndUpdate(pos, state.setValue(WAXED, false));
             level.playSound(player, pos, SoundEvents.AXE_WAX_OFF, SoundSource.BLOCKS, 1.0F, 1.0F);
             level.levelEvent(player, LevelEvent.PARTICLES_WAX_OFF, pos, 0);
@@ -73,27 +83,27 @@ public class TrellisBlock extends Block implements SimpleWaterloggedBlock, ITrel
             level.levelEvent(player, LevelEvent.PARTICLES_AND_SOUND_WAX_ON, pos, 0);
             return InteractionResult.SUCCESS;
         }
-
         // 玩家手持的是葡萄藤
         ItemStack itemInHand = player.getItemInHand(hand);
         if (!itemInHand.is(ModItems.GRAPEVINE.get())) {
-            return super.use(state, level, pos, player, hand, hitResult);
+            return super.useItemOn(stack, state, level, pos, player, hand, hitResult);
         }
         // 如果藤架是单个的
         TrellisType type = state.getValue(TYPE);
         if (type != TrellisType.SINGLE) {
-            return super.use(state, level, pos, player, hand, hitResult);
+            return super.useItemOn(stack, state, level, pos, player, hand, hitResult);
         }
         // 通过事件来执行各种不同的种植逻辑
-        MinecraftForge.EVENT_BUS.post(new PlantGrapeEvent(state, level, pos, player, hand, hitResult));
+        NeoForge.EVENT_BUS.post(new PlantGrapeEvent(state, level, pos, player, hand, hitResult));
         return InteractionResult.SUCCESS;
     }
 
     @Override
-    public BlockState updateShape(BlockState state, Direction direction, BlockState neighborState,
-                                  LevelAccessor level, BlockPos pos, BlockPos neighborPos) {
+    public BlockState updateShape(BlockState state, LevelReader level, ScheduledTickAccess ticks,
+                                  BlockPos pos, Direction direction, BlockPos neighborPos,
+                                  BlockState neighborState, RandomSource random) {
         if (state.getValue(WATERLOGGED)) {
-            level.scheduleTick(pos, Fluids.WATER, Fluids.WATER.getTickDelay(level));
+            ticks.scheduleTick(pos, Fluids.WATER, Fluids.WATER.getTickDelay(level));
         }
 
         boolean xHas = axisHasTrellis(level, pos, Direction.Axis.X);
@@ -102,7 +112,7 @@ public class TrellisBlock extends Block implements SimpleWaterloggedBlock, ITrel
         var trellisType = updateType(state.getValue(TYPE), xHas, yHas, zHas);
 
         state = state.setValue(TYPE, trellisType);
-        return super.updateShape(state, direction, neighborState, level, pos, neighborPos);
+        return super.updateShape(state, level, ticks, pos, direction, neighborPos, neighborState, random);
     }
 
     @Override

@@ -6,6 +6,7 @@ import com.github.ysbbbbbb.kaleidoscopetavern.item.DrinkBlockItem;
 import com.github.ysbbbbbb.kaleidoscopetavern.util.VoxelShapeUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
@@ -26,12 +27,10 @@ import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
-import net.minecraftforge.items.ItemHandlerHelper;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.EnumMap;
 import java.util.List;
-import java.util.function.Supplier;
 
 @SuppressWarnings("deprecation")
 public class DrinkBlock extends BottleBlock implements EntityBlock {
@@ -40,8 +39,8 @@ public class DrinkBlock extends BottleBlock implements EntityBlock {
     protected final EnumMap<Direction, VoxelShape>[] shapes;
 
     @SuppressWarnings("unchecked")
-    public DrinkBlock(int maxCount, VoxelShape... shapes) {
-        super();
+    public DrinkBlock(Identifier id, boolean irregular, int maxCount, VoxelShape... shapes) {
+        super(id, irregular);
         this.maxCount = maxCount;
         this.countProperty = IntegerProperty.create("count", 1, maxCount);
         this.shapes = new EnumMap[shapes.length];
@@ -59,9 +58,8 @@ public class DrinkBlock extends BottleBlock implements EntityBlock {
                 .setValue(WATERLOGGED, false));
     }
 
-    @Deprecated(forRemoval = true)
-    public DrinkBlock(boolean irregular, int maxCount, VoxelShape... shapes) {
-        this(maxCount, shapes);
+    public DrinkBlock(Identifier id, int maxCount, VoxelShape... shapes) {
+        this(id, false, maxCount, shapes);
     }
 
     public boolean tryIncreaseCount(Level level, BlockPos pos, BlockState state, ItemStack stack) {
@@ -79,19 +77,23 @@ public class DrinkBlock extends BottleBlock implements EntityBlock {
     }
 
     @Override
-    public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player,
-                                 InteractionHand hand, BlockHitResult hitResult) {
+    public InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hitResult) {
+        // 冒险模式下不允许交互
+        if (!player.mayBuild()) {
+            return InteractionResult.SUCCESS;
+        }
+
         // 如果是空手，那么可以尝试取回
         if (!player.getItemInHand(hand).isEmpty()) {
-            return super.use(state, level, pos, player, hand, hitResult);
+            return super.useItemOn(stack, state, level, pos, player, hand, hitResult);
         }
 
         // 尝试给玩家物品
         if (level.getBlockEntity(pos) instanceof DrinkBlockEntity be) {
-            ItemStack stack = be.removeItem();
-            if (!stack.isEmpty()) {
+            ItemStack removeItem = be.removeItem();
+            if (!removeItem.isEmpty()) {
                 be.refresh();
-                ItemHandlerHelper.giveItemToPlayer(player, stack);
+                player.getInventory().placeItemBackInInventory(removeItem);
                 // 播放放置的音效
                 level.playSound(null, pos, SoundEvents.GLASS_PLACE, SoundSource.BLOCKS);
             }
@@ -111,7 +113,7 @@ public class DrinkBlock extends BottleBlock implements EntityBlock {
     @Override
     public void onProjectileHit(Level level, BlockState state, BlockHitResult hit, Projectile projectile) {
         // 获取其中所含的效果等级最高的酒
-        if (level.isClientSide) {
+        if (level.isClientSide()) {
             super.onProjectileHit(level, state, hit, projectile);
             return;
         }
@@ -212,8 +214,8 @@ public class DrinkBlock extends BottleBlock implements EntityBlock {
             return this;
         }
 
-        public Supplier<? extends Block> build() {
-            return () -> new DrinkBlock(maxCount, shapes);
+        public DrinkBlock build(Identifier id) {
+            return new DrinkBlock(id, false, maxCount, shapes);
         }
     }
 }

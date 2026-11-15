@@ -4,7 +4,6 @@ import com.github.ysbbbbbb.kaleidoscopetavern.KaleidoscopeTavern;
 import com.github.ysbbbbbb.kaleidoscopetavern.compat.rei.ReiUtil;
 import com.github.ysbbbbbb.kaleidoscopetavern.crafting.recipe.ShakerRecipe;
 import com.github.ysbbbbbb.kaleidoscopetavern.init.ModItems;
-import com.github.ysbbbbbb.kaleidoscopetavern.init.ModRecipes;
 import me.shedaniel.math.Point;
 import me.shedaniel.math.Rectangle;
 import me.shedaniel.rei.api.client.gui.Renderer;
@@ -16,30 +15,30 @@ import me.shedaniel.rei.api.client.registry.display.DisplayRegistry;
 import me.shedaniel.rei.api.common.category.CategoryIdentifier;
 import me.shedaniel.rei.api.common.entry.EntryIngredient;
 import me.shedaniel.rei.api.common.util.EntryStacks;
-import me.shedaniel.rei.plugin.common.displays.crafting.DefaultCustomDisplay;
+import com.github.ysbbbbbb.kaleidoscopetavern.compat.rei.TavernRecipeDisplay;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class ReiShakerRecipeCategory implements DisplayCategory<DefaultCustomDisplay> {
-    public static final CategoryIdentifier<DefaultCustomDisplay> ID = CategoryIdentifier.of(KaleidoscopeTavern.MOD_ID, "plugin/shaker");
+public class ReiShakerRecipeCategory implements DisplayCategory<TavernRecipeDisplay> {
+    public static final CategoryIdentifier<TavernRecipeDisplay> ID = CategoryIdentifier.of(KaleidoscopeTavern.MOD_ID, "plugin/shaker");
 
     private static final MutableComponent TITLE = Component.translatable("block.kaleidoscope_tavern.shaker");
-    private static final ResourceLocation BG = KaleidoscopeTavern.modLoc("textures/gui/jei/shaker.png");
+    private static final Identifier BG = KaleidoscopeTavern.modLoc("textures/gui/jei/shaker.png");
 
     public static final int WIDTH = 150;
     public static final int HEIGHT = 80;
 
     @Override
-    public CategoryIdentifier<? extends DefaultCustomDisplay> getCategoryIdentifier() {
+    public CategoryIdentifier<? extends TavernRecipeDisplay> getCategoryIdentifier() {
         return ID;
     }
 
     @Override
-    public List<Widget> setupDisplay(DefaultCustomDisplay display, Rectangle bounds) {
+    public List<Widget> setupDisplay(TavernRecipeDisplay display, Rectangle bounds) {
         List<Widget> widgets = new ArrayList<>();
         int startX = bounds.x;
         int startY = bounds.y;
@@ -62,8 +61,8 @@ public class ReiShakerRecipeCategory implements DisplayCategory<DefaultCustomDis
                 .markOutput());
 
         // 绘制颜色指示块
-        display.getOptionalRecipe().ifPresent(recipe -> {
-            if (recipe instanceof ShakerRecipe shakerRecipe) {
+        display.getOptionalRecipe().ifPresent(holder -> {
+            if (holder.value() instanceof ShakerRecipe shakerRecipe) {
                 shakerRecipe.ingredientColors().forEach((index, color) -> {
                     int x = startX + 69;
                     int y = startY + 14 + 18 * index;
@@ -78,7 +77,7 @@ public class ReiShakerRecipeCategory implements DisplayCategory<DefaultCustomDis
     }
 
     @Override
-    public int getDisplayWidth(DefaultCustomDisplay display) {
+    public int getDisplayWidth(TavernRecipeDisplay display) {
         return WIDTH;
     }
 
@@ -103,7 +102,8 @@ public class ReiShakerRecipeCategory implements DisplayCategory<DefaultCustomDis
     }
 
     public static void registerDisplays(DisplayRegistry registry) {
-        registry.getRecipeManager().getAllRecipesFor(ModRecipes.SHAKER_RECIPE).forEach(recipe -> {
+        com.github.ysbbbbbb.kaleidoscopetavern.client.init.ClientRecipeEvent.SHAKER_RECIPES.forEach(holder -> {
+            ShakerRecipe recipe = holder.value();
             List<EntryIngredient> inputs = new ArrayList<>();
             for (var ingredient : recipe.getIngredients()) {
                 if (!ingredient.isEmpty()) {
@@ -111,9 +111,9 @@ public class ReiShakerRecipeCategory implements DisplayCategory<DefaultCustomDis
                 }
             }
 
-            List<EntryIngredient> outputs = List.of(ReiUtil.ofItemStack(recipe.result()));
+            List<EntryIngredient> outputs = List.of(ReiUtil.ofItemStack(recipe.result().create()));
 
-            registry.add(new DefaultCustomDisplay(recipe, inputs, outputs) {
+            registry.add(new TavernRecipeDisplay(holder, inputs, outputs) {
                 @Override
                 public CategoryIdentifier<?> getCategoryIdentifier() {
                     return ReiShakerRecipeCategory.ID;

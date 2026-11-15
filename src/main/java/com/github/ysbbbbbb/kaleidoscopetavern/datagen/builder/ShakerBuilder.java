@@ -1,32 +1,30 @@
 package com.github.ysbbbbbb.kaleidoscopetavern.datagen.builder;
 
 import com.github.ysbbbbbb.kaleidoscopetavern.KaleidoscopeTavern;
-import com.github.ysbbbbbb.kaleidoscopetavern.init.ModRecipes;
+import com.github.ysbbbbbb.kaleidoscopetavern.crafting.recipe.ShakerRecipe;
+import com.github.ysbbbbbb.kaleidoscopetavern.crafting.serializer.ShakerRecipeSerializer;
 import com.google.common.collect.Lists;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
-import net.minecraft.advancements.CriterionTriggerInstance;
-import net.minecraft.data.recipes.FinishedRecipe;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMaps;
+import net.minecraft.advancements.Criterion;
 import net.minecraft.data.recipes.RecipeBuilder;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.tags.TagKey;
+import net.minecraft.data.recipes.RecipeOutput;
+import net.minecraft.core.HolderSet;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.world.item.crafting.Recipe;
+import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.item.Item;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.level.ItemLike;
-import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
-import java.util.Objects;
-import java.util.function.Consumer;
 
 public class ShakerBuilder implements RecipeBuilder {
     private static final String NAME = "shaker";
 
     private final List<Ingredient> ingredients = Lists.newArrayList();
-    private ItemStack result = ItemStack.EMPTY;
+    private ItemStackTemplate result;
 
     public static ShakerBuilder builder() {
         return new ShakerBuilder();
@@ -37,7 +35,7 @@ public class ShakerBuilder implements RecipeBuilder {
         return this;
     }
 
-    public ShakerBuilder addIngredient(TagKey<Item> tag) {
+    public ShakerBuilder addIngredient(HolderSet<Item> tag) {
         this.ingredients.add(Ingredient.of(tag));
         return this;
     }
@@ -48,12 +46,12 @@ public class ShakerBuilder implements RecipeBuilder {
     }
 
     public ShakerBuilder setResult(ItemLike itemLike) {
-        this.result = new ItemStack(itemLike);
+        this.result = new ItemStackTemplate(itemLike.asItem());
         return this;
     }
 
     @Override
-    public RecipeBuilder unlockedBy(String name, CriterionTriggerInstance trigger) {
+    public RecipeBuilder unlockedBy(String s, Criterion<?> criterion) {
         return this;
     }
 
@@ -62,73 +60,12 @@ public class ShakerBuilder implements RecipeBuilder {
         return this;
     }
 
-    @Override
-    public Item getResult() {
-        return this.result.getItem();
+    @Override public ResourceKey<Recipe<?>> defaultId() {
+        String path = RecipeBuilder.getDefaultRecipeId(this.result).identifier().getPath();
+        return ResourceKey.create(Registries.RECIPE, KaleidoscopeTavern.modLoc(NAME + "/" + path));
     }
-
-    @Override
-    public void save(Consumer<FinishedRecipe> output) {
-        String path = RecipeBuilder.getDefaultRecipeId(this.getResult()).getPath();
-        ResourceLocation filePath = KaleidoscopeTavern.modLoc(NAME + "/" + path);
-        this.save(output, filePath);
-    }
-
-    @Override
-    public void save(Consumer<FinishedRecipe> output, String recipeId) {
-        ResourceLocation filePath = KaleidoscopeTavern.modLoc(NAME + "/" + recipeId);
-        this.save(output, filePath);
-    }
-
-    @Override
-    public void save(Consumer<FinishedRecipe> recipeOutput, ResourceLocation id) {
-        recipeOutput.accept(new ShakerFinishedRecipe(id, this.ingredients, this.result));
-    }
-
-    public static class ShakerFinishedRecipe implements FinishedRecipe {
-        private final ResourceLocation id;
-        private final List<Ingredient> ingredients;
-        private final ItemStack result;
-
-        public ShakerFinishedRecipe(ResourceLocation id, List<Ingredient> ingredients, ItemStack result) {
-            this.id = id;
-            this.ingredients = ingredients;
-            this.result = result;
-        }
-
-        @Override
-        public void serializeRecipeData(JsonObject json) {
-            JsonArray ingredientsArray = new JsonArray();
-            for (Ingredient ingredient : this.ingredients) {
-                ingredientsArray.add(ingredient.toJson());
-            }
-            json.add("ingredients", ingredientsArray);
-            JsonObject resultJson = new JsonObject();
-            ResourceLocation key = ForgeRegistries.ITEMS.getKey(this.result.getItem());
-            resultJson.addProperty("item", Objects.requireNonNull(key).toString());
-            json.add("result", resultJson);
-        }
-
-        @Override
-        public ResourceLocation getId() {
-            return this.id;
-        }
-
-        @Override
-        public RecipeSerializer<?> getType() {
-            return ModRecipes.SHAKER_SERIALIZER.get();
-        }
-
-        @Override
-        @Nullable
-        public JsonObject serializeAdvancement() {
-            return null;
-        }
-
-        @Override
-        @Nullable
-        public ResourceLocation getAdvancementId() {
-            return null;
-        }
+    @Override public void save(RecipeOutput output, ResourceKey<Recipe<?>> key) {
+        if (ingredients.size() != ShakerRecipeSerializer.MAX_INGREDIENTS) throw new IllegalStateException("Shaker recipes require three ingredients");
+        output.accept(key, new ShakerRecipe(List.copyOf(ingredients), result, Int2ObjectMaps.emptyMap()), null);
     }
 }

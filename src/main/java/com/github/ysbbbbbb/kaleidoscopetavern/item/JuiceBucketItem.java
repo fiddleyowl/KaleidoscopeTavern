@@ -1,68 +1,59 @@
 package com.github.ysbbbbbb.kaleidoscopetavern.item;
 
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.Identifier;
 import net.minecraft.ChatFormatting;
-import net.minecraft.Util;
-import net.minecraft.advancements.CriteriaTriggers;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.util.Util;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
-import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.stats.Stats;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.InteractionResultHolder;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.*;
+import net.minecraft.world.item.component.Consumable;
+import net.minecraft.world.item.consume_effects.RemoveStatusEffectsConsumeEffect;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.material.Fluid;
-import net.minecraftforge.common.capabilities.ICapabilityProvider;
-import net.minecraftforge.fluids.capability.wrappers.FluidBucketWrapper;
-import net.minecraftforge.registries.ForgeRegistries;
 
-import javax.annotation.Nullable;
-import java.util.List;
 import java.util.function.Supplier;
 
+import static net.minecraft.world.item.component.Consumables.defaultDrink;
+
 public class JuiceBucketItem extends BucketItem implements IHasContainer {
-    public JuiceBucketItem(Supplier<? extends Fluid> supplier) {
-        super(supplier, new Properties()
+    public static final Consumable JUICE_BUCKET_DRINK = defaultDrink()
+            .onConsume(new RemoveStatusEffectsConsumeEffect(MobEffects.POISON))
+            .build();
+
+    public JuiceBucketItem(Identifier id, Supplier<? extends Fluid> supplier) {
+        super(supplier.get(), new Properties()
+                .setId(ResourceKey.create(Registries.ITEM, id))
                 .stacksTo(16)
+                .component(DataComponents.CONSUMABLE, JUICE_BUCKET_DRINK)
                 .craftRemainder(Items.BUCKET));
     }
 
     @Override
     public ItemStack finishUsingItem(ItemStack stack, Level level, LivingEntity entity) {
-        if (!level.isClientSide) {
-            entity.curePotionEffects(stack);
-        }
-        if (entity instanceof ServerPlayer serverPlayer) {
-            CriteriaTriggers.CONSUME_ITEM.trigger(serverPlayer, stack);
-            serverPlayer.awardStat(Stats.ITEM_USED.get(this));
-        }
-
-        if (entity instanceof Player player && !player.isCreative()) {
-            stack.shrink(1);
-        }
-
+        super.finishUsingItem(stack, level, entity);
         return returnContainerToEntity(stack, level, entity);
     }
 
     @Override
-    public ICapabilityProvider initCapabilities(ItemStack stack, @Nullable CompoundTag nbt) {
-        return new FluidBucketWrapper(stack);
-    }
-
-    @Override
-    public int getUseDuration(ItemStack stack) {
+    public int getUseDuration(ItemStack stack, LivingEntity entity) {
         return 32;
     }
 
     @Override
-    public UseAnim getUseAnimation(ItemStack stack) {
-        return UseAnim.DRINK;
+    public ItemUseAnimation getUseAnimation(ItemStack stack) {
+        return ItemUseAnimation.DRINK;
     }
 
     @Override
-    public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
+    public InteractionResult use(Level level, Player player, InteractionHand hand) {
         return ItemUtils.startUsingInstantly(level, player, hand);
     }
 
@@ -72,8 +63,8 @@ public class JuiceBucketItem extends BucketItem implements IHasContainer {
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, @Nullable Level pLevel, List<Component> components, TooltipFlag pIsAdvanced) {
-        String tooltipKey = Util.makeDescriptionId("tooltip", ForgeRegistries.ITEMS.getKey(this));
-        components.add(Component.translatable(tooltipKey).withStyle(ChatFormatting.GRAY));
+    public void appendHoverText(ItemStack stack, TooltipContext context, net.minecraft.world.item.component.TooltipDisplay display, java.util.function.Consumer<Component> components, TooltipFlag isAdvanced) {
+        String tooltipKey = Util.makeDescriptionId("tooltip", BuiltInRegistries.ITEM.getKey(this));
+        components.accept(Component.translatable(tooltipKey).withStyle(ChatFormatting.GRAY));
     }
 }

@@ -2,7 +2,7 @@ package com.github.ysbbbbbb.kaleidoscopetavern.compat.curios;
 
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.fml.ModList;
+import net.neoforged.fml.ModList;
 
 import java.util.Optional;
 

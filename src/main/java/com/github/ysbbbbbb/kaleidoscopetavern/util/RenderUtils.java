@@ -3,87 +3,78 @@ package com.github.ysbbbbbb.kaleidoscopetavern.util;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.ItemBlockRenderTypes;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.block.FluidModel;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
-import net.minecraft.world.inventory.InventoryMenu;
 import net.minecraft.world.level.material.Fluid;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
-import net.minecraftforge.client.extensions.common.IClientFluidTypeExtensions;
+import net.minecraft.world.level.material.FluidState;
 import org.joml.Matrix4f;
 
-@OnlyIn(Dist.CLIENT)
 public class RenderUtils {
     /**
      * 渲染流体的工具方法
      *
-     * @param fluid     要渲染的流体
-     * @param poseStack PoseStack
-     * @param buffer    MultiBufferSource
-     * @param light     PackedLight
-     * @param size      流体平面贴图的大小（0-16），可以根据实际需要调整
-     * @param y         流体平面贴图的高度，根据实际流体显示高度调整
+     * @param fluid          要渲染的流体
+     * @param pose           PoseStack.Pose
+     * @param vertexConsumer VertexConsumer
+     * @param light          PackedLight
+     * @param size           流体平面贴图的大小（0-16），可以根据实际需要调整
+     * @param y              流体平面贴图的高度，根据实际流体显示高度调整
      */
-    public static void renderFluid(Fluid fluid, PoseStack poseStack, MultiBufferSource buffer, int light, int size, float y) {
-        TextureAtlasSprite sprite = getStillFluidSprite(fluid);
-        int color = getFluidColor(fluid);
-        renderSurface(poseStack, buffer, sprite, color, light, Mth.clamp(size, 1, 16), y);
+    public static void renderFluid(Fluid fluid, PoseStack.Pose pose, VertexConsumer vertexConsumer, int light, int size, float y) {
+        FluidState fluidState = fluid.defaultFluidState();
+        FluidModel model = Minecraft.getInstance().getModelManager().getFluidStateModelSet().get(fluidState);
+        TextureAtlasSprite sprite = model.stillMaterial().sprite();
+        int color = model.fluidTintSource() != null ? model.fluidTintSource().color(fluidState) : -1;
+        renderSurface(pose, vertexConsumer, sprite, color, light, Mth.clamp(size, 1, 16), y);
     }
 
     /**
      * 工具方法，用于渲染流体贴图
      *
-     * @param poseStack PoseStack
-     * @param buffer    MultiBufferSource
-     * @param sprite    TextureAtlasSprite
-     * @param color     流体附加着色
-     * @param light     PackedLight
-     * @param size      流体平面贴图的大小（0-16）
-     * @param y         流体平面贴图的高度
+     * @param pose           PoseStack.Pose
+     * @param vertexConsumer VertexConsumer
+     * @param sprite         TextureAtlasSprite
+     * @param color          流体附加着色
+     * @param light          PackedLight
+     * @param size           流体平面贴图的大小（0-16）
+     * @param y              流体平面贴图的高度
      */
-    public static void renderSurface(PoseStack poseStack, MultiBufferSource buffer, TextureAtlasSprite sprite,
+    public static void renderSurface(PoseStack.Pose pose, VertexConsumer vertexConsumer, TextureAtlasSprite sprite,
                                      int color, int light, int size, float y) {
-        VertexConsumer vertexConsumer = buffer.getBuffer(RenderType.translucent());
-        Matrix4f matrix = poseStack.last().pose();
+        Matrix4f matrix = pose.pose();
 
         // 贴图的位置和大小
         int margin = (16 - size) / 2;
         float min = margin / 16f, max = 1 - margin / 16f;
+        float spriteSize = size / 16f;
 
         // 渲染一个平面
-        vertexConsumer.vertex(matrix, min, y, min)
-                .color(color)
-                .uv(sprite.getU0(), sprite.getV0())
-                .overlayCoords(OverlayTexture.NO_OVERLAY)
-                .uv2(light)
-                .normal(0, 1, 0)
-                .endVertex();
-        vertexConsumer.vertex(matrix, min, y, max)
-                .color(color)
-                .uv(sprite.getU0(), sprite.getV(size))
-                .overlayCoords(OverlayTexture.NO_OVERLAY)
-                .uv2(light)
-                .normal(0, 1, 0)
-                .endVertex();
-        vertexConsumer.vertex(matrix, max, y, max)
-                .color(color)
-                .uv(sprite.getU(size), sprite.getV(size))
-                .overlayCoords(OverlayTexture.NO_OVERLAY)
-                .uv2(light)
-                .normal(0, 1, 0)
-                .endVertex();
-        vertexConsumer.vertex(matrix, max, y, min)
-                .color(color)
-                .uv(sprite.getU(size), sprite.getV0())
-                .overlayCoords(OverlayTexture.NO_OVERLAY)
-                .uv2(light)
-                .normal(0, 1, 0)
-                .endVertex();
+        vertexConsumer.addVertex(matrix, min, y, min)
+                .setColor(color)
+                .setUv(sprite.getU0(), sprite.getV0())
+                .setOverlay(OverlayTexture.NO_OVERLAY)
+                .setLight(light)
+                .setNormal(0, 1, 0);
+        vertexConsumer.addVertex(matrix, min, y, max)
+                .setColor(color)
+                .setUv(sprite.getU0(), sprite.getV(spriteSize))
+                .setOverlay(OverlayTexture.NO_OVERLAY)
+                .setLight(light)
+                .setNormal(0, 1, 0);
+        vertexConsumer.addVertex(matrix, max, y, max)
+                .setColor(color)
+                .setUv(sprite.getU(spriteSize), sprite.getV(spriteSize))
+                .setOverlay(OverlayTexture.NO_OVERLAY)
+                .setLight(light)
+                .setNormal(0, 1, 0);
+        vertexConsumer.addVertex(matrix, max, y, min)
+                .setColor(color)
+                .setUv(sprite.getU(spriteSize), sprite.getV0())
+                .setOverlay(OverlayTexture.NO_OVERLAY)
+                .setLight(light)
+                .setNormal(0, 1, 0);
     }
 
     /**
@@ -102,16 +93,5 @@ public class RenderUtils {
         h = (h ^ (h >>> 27)) * 0x94d049bb133111ebL;
         h ^= (h >>> 31);
         return (float) (int) h / (float) Integer.MAX_VALUE;
-    }
-
-    private static TextureAtlasSprite getStillFluidSprite(Fluid fluid) {
-        IClientFluidTypeExtensions renderProperties = IClientFluidTypeExtensions.of(fluid);
-        ResourceLocation fluidStill = renderProperties.getStillTexture();
-        return Minecraft.getInstance().getTextureAtlas(InventoryMenu.BLOCK_ATLAS).apply(fluidStill);
-    }
-
-    private static int getFluidColor(Fluid fluid) {
-        IClientFluidTypeExtensions ext = IClientFluidTypeExtensions.of(fluid);
-        return ext.getTintColor();
     }
 }

@@ -3,17 +3,21 @@ package com.github.ysbbbbbb.kaleidoscopetavern.block.deco;
 import com.github.ysbbbbbb.kaleidoscopetavern.blockentity.deco.BarStoolBlockEntity;
 import com.github.ysbbbbbb.kaleidoscopetavern.entity.SitEntity;
 import com.github.ysbbbbbb.kaleidoscopetavern.init.ModBlocks;
+import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.DyeColor;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
-import net.minecraft.world.level.BlockGetter;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.level.LevelAccessor;
+import net.minecraft.world.level.*;
 import net.minecraft.world.level.block.*;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
@@ -38,6 +42,8 @@ import java.util.List;
 
 @SuppressWarnings("deprecation")
 public class BarStoolBlock extends BaseEntityBlock implements SimpleWaterloggedBlock {
+    public static final MapCodec<BarStoolBlock> CODEC = simpleCodec(p -> new BarStoolBlock(p, DyeColor.WHITE));
+
     public static final EnumProperty<Direction> FACING = BlockStateProperties.HORIZONTAL_FACING;
     public static final BooleanProperty WATERLOGGED = BlockStateProperties.WATERLOGGED;
 
@@ -71,8 +77,9 @@ public class BarStoolBlock extends BaseEntityBlock implements SimpleWaterloggedB
             Block.box(11, 15, 2, 14, 21, 14)
     );
 
-    public BarStoolBlock(DyeColor color) {
+    public BarStoolBlock(Identifier id, DyeColor color) {
         super(Properties.of()
+                .setId(ResourceKey.create(Registries.BLOCK, id))
                 .mapColor(MapColor.WOOD)
                 .instrument(NoteBlockInstrument.GUITAR)
                 .strength(0.8F)
@@ -85,13 +92,19 @@ public class BarStoolBlock extends BaseEntityBlock implements SimpleWaterloggedB
         this.color = color;
     }
 
+    public BarStoolBlock(Properties properties, DyeColor color) {
+        super(properties);
+        this.color = color;
+    }
+
     @Override
-    public BlockState updateShape(BlockState state, Direction direction, BlockState neighborState,
-                                  LevelAccessor level, BlockPos pos, BlockPos neighborPos) {
+    public BlockState updateShape(BlockState state, LevelReader level, ScheduledTickAccess ticks,
+                                  BlockPos pos, Direction direction, BlockPos neighborPos,
+                                  BlockState neighborState, RandomSource random) {
         if (state.getValue(WATERLOGGED)) {
-            level.scheduleTick(pos, Fluids.WATER, Fluids.WATER.getTickDelay(level));
+            ticks.scheduleTick(pos, Fluids.WATER, Fluids.WATER.getTickDelay(level));
         }
-        return super.updateShape(state, direction, neighborState, level, pos, neighborPos);
+        return super.updateShape(state, level, ticks, pos, direction, neighborPos, neighborState, random);
     }
 
     @Override
@@ -109,14 +122,15 @@ public class BarStoolBlock extends BaseEntityBlock implements SimpleWaterloggedB
     }
 
     @Override
-    public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hitResult) {
-        if (!level.isClientSide) {
+    public InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
+                                       Player player, InteractionHand hand, BlockHitResult hitResult) {
+        if (!level.isClientSide()) {
             List<SitEntity> entities = level.getEntitiesOfClass(SitEntity.class, new AABB(pos));
             if (entities.isEmpty()) {
                 SitEntity entitySit = new SitEntity(level, pos, 0.875);
                 entitySit.setYRot(state.getValue(FACING).toYRot());
                 level.addFreshEntity(entitySit);
-                player.startRiding(entitySit, true);
+                player.startRiding(entitySit, true, true);
                 if (level.getBlockEntity(pos) instanceof BarStoolBlockEntity blockEntity) {
                     blockEntity.setSitEntity(entitySit);
                 }
@@ -125,7 +139,7 @@ public class BarStoolBlock extends BaseEntityBlock implements SimpleWaterloggedB
         } else {
             // todo-check
             // 不知有无炸弹:(, 但这样能够将抱着的生物（使用 carryOn 模组）放置在方块上，而不是抱着生物坐在凳子上
-            return InteractionResult.sidedSuccess(true);
+            return InteractionResult.SUCCESS;
         }
         return InteractionResult.PASS;
     }
@@ -158,6 +172,11 @@ public class BarStoolBlock extends BaseEntityBlock implements SimpleWaterloggedB
             case WEST -> WEST_SHAPE;
             default -> NORTH_SHAPE;
         };
+    }
+
+    @Override
+    protected MapCodec<? extends BaseEntityBlock> codec() {
+        return CODEC;
     }
 
     @Override

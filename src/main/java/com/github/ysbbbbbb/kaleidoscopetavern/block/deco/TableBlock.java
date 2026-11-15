@@ -2,10 +2,15 @@ package com.github.ysbbbbbb.kaleidoscopetavern.block.deco;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.LevelAccessor;
+import net.minecraft.world.level.LevelReader;
+import net.minecraft.world.level.ScheduledTickAccess;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.SimpleWaterloggedBlock;
 import net.minecraft.world.level.block.SoundType;
@@ -33,8 +38,9 @@ public class TableBlock extends Block implements SimpleWaterloggedBlock {
     public static final int MIDDLE = 2;
     public static final int RIGHT = 3;
 
-    public TableBlock() {
+    public TableBlock(Identifier id) {
         super(Properties.of()
+                .setId(ResourceKey.create(Registries.BLOCK, id))
                 .mapColor(MapColor.WOOD)
                 .instrument(NoteBlockInstrument.BASS)
                 .strength(2.0F, 3.0F)
@@ -47,18 +53,22 @@ public class TableBlock extends Block implements SimpleWaterloggedBlock {
                 .setValue(WATERLOGGED, false));
     }
 
+    public TableBlock(Properties properties) {
+        super(properties);
+    }
+
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
         builder.add(AXIS, POSITION, WATERLOGGED);
     }
 
-    private BlockState checkEastWestState(LevelAccessor levelAccessor, BlockPos pos, BlockState baseState) {
+    private BlockState checkEastWestState(LevelReader levelReader, BlockPos pos, BlockState baseState) {
         // 如果自己本身已经成为 Z 方向的组合桌，那么不更新
         if (baseState.getValue(AXIS) == Direction.Axis.Z && baseState.getValue(POSITION) != SINGLE) {
             return baseState;
         }
-        BlockState westState = levelAccessor.getBlockState(pos.west());
-        BlockState eastState = levelAccessor.getBlockState(pos.east());
+        BlockState westState = levelReader.getBlockState(pos.west());
+        BlockState eastState = levelReader.getBlockState(pos.east());
         if (checkIfShouldLink(eastState, Direction.Axis.Z) && checkIfShouldLink(westState, Direction.Axis.Z)) {
             return baseState.setValue(POSITION, MIDDLE).setValue(AXIS, Direction.Axis.X);
         }
@@ -71,13 +81,13 @@ public class TableBlock extends Block implements SimpleWaterloggedBlock {
         return baseState.setValue(POSITION, SINGLE);
     }
 
-    private BlockState checkNorthSouthState(LevelAccessor levelAccessor, BlockPos pos, BlockState baseState) {
+    private BlockState checkNorthSouthState(LevelReader levelReader, BlockPos pos, BlockState baseState) {
         // 如果自己本身已经成为 X 方向的组合桌，那么不更新
         if (baseState.getValue(AXIS) == Direction.Axis.X && baseState.getValue(POSITION) != SINGLE) {
             return baseState;
         }
-        BlockState northState = levelAccessor.getBlockState(pos.north());
-        BlockState southState = levelAccessor.getBlockState(pos.south());
+        BlockState northState = levelReader.getBlockState(pos.north());
+        BlockState southState = levelReader.getBlockState(pos.south());
         if (checkIfShouldLink(southState, Direction.Axis.X) && checkIfShouldLink(northState, Direction.Axis.X)) {
             return baseState.setValue(POSITION, MIDDLE).setValue(AXIS, Direction.Axis.Z);
         }
@@ -103,15 +113,17 @@ public class TableBlock extends Block implements SimpleWaterloggedBlock {
     }
 
     @Override
-    public BlockState updateShape(BlockState state, Direction direction, BlockState neighborState, LevelAccessor levelAccessor, BlockPos pos, BlockPos neighborPos) {
+    public BlockState updateShape(BlockState state, LevelReader level, ScheduledTickAccess ticks,
+                                  BlockPos pos, Direction direction, BlockPos neighborPos,
+                                  BlockState neighborState, RandomSource random) {
         if (state.getValue(WATERLOGGED)) {
-            levelAccessor.scheduleTick(pos, Fluids.WATER, Fluids.WATER.getTickDelay(levelAccessor));
+            ticks.scheduleTick(pos, Fluids.WATER, Fluids.WATER.getTickDelay(level));
         }
         if (direction.getAxis() == Direction.Axis.X) {
-            return checkEastWestState(levelAccessor, pos, state);
+            return checkEastWestState(level, pos, state);
         }
         if (direction.getAxis() == Direction.Axis.Z) {
-            return checkNorthSouthState(levelAccessor, pos, state);
+            return checkNorthSouthState(level, pos, state);
         }
         return state;
     }
@@ -145,7 +157,7 @@ public class TableBlock extends Block implements SimpleWaterloggedBlock {
     }
 
     @Override
-    public boolean isPathfindable(BlockState state, BlockGetter level, BlockPos pos, PathComputationType type) {
+    protected boolean isPathfindable(BlockState state, PathComputationType pathComputationType) {
         return false;
     }
 }

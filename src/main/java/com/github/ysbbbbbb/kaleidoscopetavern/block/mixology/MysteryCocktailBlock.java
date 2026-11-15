@@ -1,5 +1,6 @@
 package com.github.ysbbbbbb.kaleidoscopetavern.block.mixology;
 
+import net.minecraft.resources.Identifier;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.util.RandomSource;
@@ -7,6 +8,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 
 public class MysteryCocktailBlock extends CocktailBlock {
+    public MysteryCocktailBlock(Identifier id) { super(id); }
     @Override
     public void animateTick(BlockState state, Level level, BlockPos pos, RandomSource random) {
         double x = pos.getX() + 0.5;
@@ -17,7 +19,7 @@ public class MysteryCocktailBlock extends CocktailBlock {
         double ySpeed = random.nextDouble();
         double zSpeed = random.nextDouble();
 
-        level.addParticle(ParticleTypes.EFFECT,
+        level.addParticle(net.minecraft.core.particles.SpellParticleOption.create(ParticleTypes.EFFECT, -1, 1.0F),
                 x + random.nextDouble() / 5 * (random.nextBoolean() ? 1 : -1),
                 y + random.nextDouble() / 5,
                 z + random.nextDouble() / 5 * (random.nextBoolean() ? 1 : -1),

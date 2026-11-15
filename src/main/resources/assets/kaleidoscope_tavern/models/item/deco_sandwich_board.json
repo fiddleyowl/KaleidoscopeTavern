@@ -5,7 +5,7 @@
 	"textures": {
 		"particle": "kaleidoscope_tavern:block/deco/sandwich_board/body",
 		"layer0": "kaleidoscope_tavern:block/deco/sandwich_board/body",
-		"layer1": "kaleidoscope_tavern:block/deco/sandwich_board/base"
+		"layer1": "kaleidoscope_tavern:block/deco/sandwich_board/body"
 	},
 	"elements": [
 		{

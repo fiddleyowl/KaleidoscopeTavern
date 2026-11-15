@@ -2,6 +2,7 @@ package com.github.ysbbbbbb.kaleidoscopetavern.effect;
 
 import com.github.ysbbbbbb.kaleidoscopetavern.init.tag.TagMod;
 import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.player.Player;
@@ -16,20 +17,19 @@ public class GrassStealthEffect extends BaseEffect {
     }
 
     @Override
-    public boolean isDurationEffectTick(int duration, int amplifier) {
+    public boolean shouldApplyEffectTickThisTick(int duration, int amplifier) {
         return duration % 10 == 0;
     }
 
     @Override
-    public void applyEffectTick(LivingEntity livingEntity, int amplifier) {
+    public boolean applyEffectTick(ServerLevel level, LivingEntity livingEntity, int amplifier) {
         if (!livingEntity.isShiftKeyDown()) {
-            return;
+            return true;
         }
-        Level level = livingEntity.level();
         BlockPos pos = livingEntity.blockPosition();
         BlockPos abovePos = pos.above();
         if (notInGrassStealthPlant(level, pos) && notInGrassStealthPlant(level, abovePos)) {
-            return;
+            return true;
         }
         if (livingEntity instanceof Player player) {
             player.causeFoodExhaustion(0.1F);
@@ -40,6 +40,7 @@ public class GrassStealthEffect extends BaseEffect {
                 e.setTarget(null);
             }
         });
+        return true;
     }
 
     public static boolean notInGrassStealthPlant(Level level, BlockPos pos) {

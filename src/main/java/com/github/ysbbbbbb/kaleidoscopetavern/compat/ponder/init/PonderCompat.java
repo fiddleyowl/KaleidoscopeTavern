@@ -1,6 +1,7 @@
 package com.github.ysbbbbbb.kaleidoscopetavern.compat.ponder.init;
 
-import net.minecraftforge.fml.ModList;
+
+import net.neoforged.fml.ModList;
 
 public class PonderCompat {
     public static final String ID = "ponder";

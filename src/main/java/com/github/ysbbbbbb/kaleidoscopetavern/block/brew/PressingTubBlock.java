@@ -2,8 +2,13 @@ package com.github.ysbbbbbb.kaleidoscopetavern.block.brew;
 
 import com.github.ysbbbbbb.kaleidoscopetavern.api.blockentity.IPressingTub;
 import com.github.ysbbbbbb.kaleidoscopetavern.blockentity.brew.PressingTubBlockEntity;
+import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Entity;
@@ -13,16 +18,14 @@ import net.minecraft.world.item.BucketItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
-import net.minecraft.world.level.BlockGetter;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.level.LevelAccessor;
+import net.minecraft.world.level.*;
 import net.minecraft.world.level.block.*;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
-import net.minecraft.world.level.block.state.properties.DirectionProperty;
+import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.level.block.state.properties.NoteBlockInstrument;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.material.Fluids;
@@ -34,15 +37,19 @@ import net.minecraft.world.phys.shapes.BooleanOp;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
-import net.minecraftforge.fluids.capability.IFluidHandler;
-import net.minecraftforge.fluids.capability.templates.FluidTank;
-import org.jetbrains.annotations.Nullable;
+import net.neoforged.neoforge.transfer.access.ItemAccess;
+import net.neoforged.neoforge.transfer.fluid.FluidStacksResourceHandler;
+import net.neoforged.neoforge.transfer.item.ItemResource;
+import net.neoforged.neoforge.transfer.transaction.Transaction;
+import org.jspecify.annotations.Nullable;
 
 import java.util.List;
 
 @SuppressWarnings("deprecation")
 public class PressingTubBlock extends BaseEntityBlock implements SimpleWaterloggedBlock {
-    public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
+    public static final MapCodec<PressingTubBlock> CODEC = simpleCodec(PressingTubBlock::new);
+
+    public static final EnumProperty<Direction> FACING = BlockStateProperties.HORIZONTAL_FACING;
     public static final BooleanProperty TILT = BooleanProperty.create("tilt");
     public static final BooleanProperty WATERLOGGED = BlockStateProperties.WATERLOGGED;
 
@@ -73,8 +80,9 @@ public class PressingTubBlock extends BaseEntityBlock implements SimpleWaterlogg
             Block.box(0, 8, 0, 8, 16, 16)
     );
 
-    public PressingTubBlock() {
+    public PressingTubBlock(Identifier id) {
         super(Properties.of()
+                .setId(ResourceKey.create(Registries.BLOCK, id))
                 .mapColor(MapColor.WOOD)
                 .instrument(NoteBlockInstrument.GUITAR)
                 .strength(0.8F)
@@ -86,9 +94,13 @@ public class PressingTubBlock extends BaseEntityBlock implements SimpleWaterlogg
                 .setValue(WATERLOGGED, false));
     }
 
+    public PressingTubBlock(Properties properties) {
+        super(properties);
+    }
+
     @Override
-    public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player,
-                                 InteractionHand hand, BlockHitResult hitResult) {
+    public InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
+                                       Player player, InteractionHand hand, BlockHitResult hitResult) {
         if (!(level.getBlockEntity(pos) instanceof IPressingTub pressingTub)) {
             return InteractionResult.PASS;
         }
@@ -105,7 +117,7 @@ public class PressingTubBlock extends BaseEntityBlock implements SimpleWaterlogg
         }
 
         // 然后尝试能否取出
-        if (pressingTub.getResult(player, itemInHand)) {
+        if (pressingTub.getResult(player, ItemAccess.forPlayerInteraction(player, hand))) {
             return InteractionResult.SUCCESS;
         }
 
@@ -117,7 +129,7 @@ public class PressingTubBlock extends BaseEntityBlock implements SimpleWaterlogg
     }
 
     @Override
-    public void fallOn(Level level, BlockState state, BlockPos pos, Entity entity, float fallDistance) {
+    public void fallOn(Level level, BlockState state, BlockPos pos, Entity entity, double fallDistance) {
         // 倾斜的果盘不能踩
         if (state.getValue(TILT)) {
             super.fallOn(level, state, pos, entity, fallDistance);
@@ -142,21 +154,23 @@ public class PressingTubBlock extends BaseEntityBlock implements SimpleWaterlogg
         List<ItemStack> stacks = super.getDrops(pState, pParams);
         BlockEntity blockEntity = pParams.getOptionalParameter(LootContextParams.BLOCK_ENTITY);
         if (blockEntity instanceof IPressingTub pressingTub) {
-            ItemStack drop = pressingTub.getItems().getStackInSlot(0).copy();
-            if (!drop.isEmpty()) {
-                stacks.add(drop);
+            ItemResource resource = pressingTub.getItems().getResource(0);
+            int amount = pressingTub.getItems().getAmountAsInt(0);
+            if (!resource.isEmpty() && amount > 0) {
+                stacks.add(resource.toStack(amount));
             }
         }
         return stacks;
     }
 
     @Override
-    public BlockState updateShape(BlockState state, Direction direction, BlockState neighborState,
-                                  LevelAccessor level, BlockPos pos, BlockPos neighborPos) {
+    public BlockState updateShape(BlockState state, LevelReader level, ScheduledTickAccess ticks,
+                                  BlockPos pos, Direction direction, BlockPos neighborPos,
+                                  BlockState neighborState, RandomSource random) {
         if (state.getValue(WATERLOGGED)) {
-            level.scheduleTick(pos, Fluids.WATER, Fluids.WATER.getTickDelay(level));
+            ticks.scheduleTick(pos, Fluids.WATER, Fluids.WATER.getTickDelay(level));
         }
-        return super.updateShape(state, direction, neighborState, level, pos, neighborPos);
+        return super.updateShape(state, level, ticks, pos, direction, neighborPos, neighborState, random);
     }
 
     @Override
@@ -223,7 +237,7 @@ public class PressingTubBlock extends BaseEntityBlock implements SimpleWaterlogg
     }
 
     @Override
-    public int getAnalogOutputSignal(BlockState state, Level level, BlockPos blockPos) {
+    public int getAnalogOutputSignal(BlockState state, Level level, BlockPos blockPos, Direction direction) {
         BlockEntity blockEntity = level.getBlockEntity(blockPos);
         if (blockEntity instanceof IPressingTub pressingTub) {
             return pressingTub.getFluidAmount();
@@ -232,8 +246,8 @@ public class PressingTubBlock extends BaseEntityBlock implements SimpleWaterlogg
     }
 
     @Override
-    public ItemStack pickupBlock(LevelAccessor level, BlockPos pos, BlockState state) {
-        ItemStack stack = SimpleWaterloggedBlock.super.pickupBlock(level, pos, state);
+    public ItemStack pickupBlock(@Nullable LivingEntity user, LevelAccessor level, BlockPos pos, BlockState state) {
+        ItemStack stack = SimpleWaterloggedBlock.super.pickupBlock(user, level, pos, state);
         if (!stack.isEmpty()) {
             return stack;
         }
@@ -249,10 +263,13 @@ public class PressingTubBlock extends BaseEntityBlock implements SimpleWaterlogg
             return stack;
         }
         // 判断产物是否是铁桶容器的
-        FluidTank fluid = pressingTub.getFluid();
-        Item bucket = fluid.getFluid().getFluid().getBucket();
+        FluidStacksResourceHandler fluidHandler = pressingTub.getFluid();
+        Item bucket = fluidHandler.getResource(0).getFluid().getBucket();
         if (bucket instanceof BucketItem) {
-            fluid.drain(IPressingTub.MAX_FLUID_AMOUNT, IFluidHandler.FluidAction.EXECUTE);
+            try (Transaction tx = Transaction.openRoot()) {
+                fluidHandler.extract(fluidHandler.getResource(0), IPressingTub.MAX_FLUID_AMOUNT, tx);
+                tx.commit();
+            }
             return bucket.getDefaultInstance();
         }
         return stack;
@@ -266,5 +283,10 @@ public class PressingTubBlock extends BaseEntityBlock implements SimpleWaterlogg
     @Override
     public BlockState mirror(BlockState state, Mirror mirror) {
         return state.rotate(mirror.getRotation(state.getValue(FACING)));
+    }
+
+    @Override
+    protected MapCodec<? extends BaseEntityBlock> codec() {
+        return CODEC;
     }
 }

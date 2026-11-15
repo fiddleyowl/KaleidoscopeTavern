@@ -8,20 +8,17 @@ import com.github.ysbbbbbb.kaleidoscopetavern.init.ModBlocks;
 import com.github.ysbbbbbb.kaleidoscopetavern.init.ModFluids;
 import com.github.ysbbbbbb.kaleidoscopetavern.init.ModItems;
 import com.github.ysbbbbbb.kaleidoscopetavern.init.ModParticles;
-import net.createmod.catnip.math.Pointing;
-import net.createmod.ponder.api.ParticleEmitter;
-import net.createmod.ponder.api.scene.SceneBuilder;
-import net.createmod.ponder.api.scene.SceneBuildingUtil;
-import net.createmod.ponder.api.scene.Selection;
+import net.createmod.catnip.api.math.Pointing;
+import net.createmod.ponder.api.client.scene.ParticleEmitter;
+import net.createmod.ponder.api.client.scene.SceneBuilder;
+import net.createmod.ponder.api.client.scene.SceneBuildingUtil;
+import net.createmod.ponder.api.client.scene.Selection;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.Direction;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.fluids.FluidStack;
-import net.minecraftforge.fluids.capability.IFluidHandler;
 
 public class BarrelScenes {
     public static void introduction(SceneBuilder scene, SceneBuildingUtil util) {
@@ -73,7 +70,7 @@ public class BarrelScenes {
         scene.overlay().showControls(barrelTop.blockSurface(Direction.UP), Pointing.DOWN, 35).rightClick().withItem(grapeBucket.copy());
         scene.idle(5);
         barrel.modifyBlockEntity(BarrelBlockEntity.class, (be) -> {
-            be.getFluid().fill(new FluidStack(ModFluids.GRAPE_JUICE.get(), 4000), IFluidHandler.FluidAction.EXECUTE);
+            be.getFluid().set(0, net.neoforged.neoforge.transfer.fluid.FluidResource.of(ModFluids.GRAPE_JUICE.get()), 4000);
             be.refresh();
         });
         scene.idle(50);

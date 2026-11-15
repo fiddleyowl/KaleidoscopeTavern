@@ -5,18 +5,17 @@ import com.github.ysbbbbbb.kaleidoscopetavern.init.ModBlocks;
 import com.github.ysbbbbbb.kaleidoscopetavern.init.tag.TagCommon;
 import com.github.ysbbbbbb.kaleidoscopetavern.init.tag.TagMod;
 import net.minecraft.core.HolderLookup;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.data.PackOutput;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraftforge.common.data.BlockTagsProvider;
-import net.minecraftforge.common.data.ExistingFileHelper;
-import org.jetbrains.annotations.Nullable;
+import net.neoforged.neoforge.common.data.BlockTagsProvider;
 
 import java.util.concurrent.CompletableFuture;
 
 public class TagBlock extends BlockTagsProvider {
-    public TagBlock(PackOutput output, CompletableFuture<HolderLookup.Provider> lookupProvider, @Nullable ExistingFileHelper existingFileHelper) {
-        super(output, lookupProvider, KaleidoscopeTavern.MOD_ID, existingFileHelper);
+    public TagBlock(PackOutput output, CompletableFuture<HolderLookup.Provider> lookupProvider) {
+        super(output, lookupProvider, KaleidoscopeTavern.MOD_ID);
     }
 
     @Override
@@ -164,8 +163,11 @@ public class TagBlock extends BlockTagsProvider {
         );
 
         this.tag(TagMod.GRASS_STEALTH_PLANTS).add(
-                Blocks.GRASS,
+                Blocks.SHORT_GRASS,
+                Blocks.SHORT_DRY_GRASS,
                 Blocks.TALL_GRASS,
+                Blocks.TALL_DRY_GRASS,
+                Blocks.FIREFLY_BUSH,
                 Blocks.FERN,
                 Blocks.LARGE_FERN,
                 Blocks.DEAD_BUSH,
@@ -213,5 +215,11 @@ public class TagBlock extends BlockTagsProvider {
                 ModBlocks.ICE_GRAPE_CROP.get(),
                 ModBlocks.GOLD_GRAPE_CROP.get()
         );
+
+        // Carry On 黑名单
+        var blacklist = tag(TagCommon.CARRYON_BLOCK_BLACKLIST);
+        BuiltInRegistries.BLOCK.keySet().stream()
+                .filter(id -> id.getNamespace().equals(KaleidoscopeTavern.MOD_ID))
+                .forEach(id -> blacklist.add(BuiltInRegistries.BLOCK.getValue(id)));
     }
 }

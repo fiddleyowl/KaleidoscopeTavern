@@ -3,9 +3,9 @@ package com.github.ysbbbbbb.kaleidoscopetavern.blockentity.deco;
 import com.github.ysbbbbbb.kaleidoscopetavern.blockentity.BaseBlockEntity;
 import com.github.ysbbbbbb.kaleidoscopetavern.init.ModBlocks;
 import net.minecraft.core.BlockPos;
+import net.minecraft.tags.EntityTypeTags;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.MobType;
-import net.minecraft.world.entity.monster.ZombieVillager;
+import net.minecraft.world.entity.monster.zombie.ZombieVillager;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
@@ -25,7 +25,7 @@ public class IncenseBlockEntity extends BaseBlockEntity {
         AABB area = new AABB(pos).inflate(32);
         List<LivingEntity> entities = level.getEntitiesOfClass(
                 LivingEntity.class, area,
-                e -> e.getMobType() == MobType.UNDEAD && e.isAlive()
+                e -> e.getType().builtInRegistryHolder().is(EntityTypeTags.UNDEAD) && e.isAlive()
         );
 
         for (LivingEntity entity : entities) {

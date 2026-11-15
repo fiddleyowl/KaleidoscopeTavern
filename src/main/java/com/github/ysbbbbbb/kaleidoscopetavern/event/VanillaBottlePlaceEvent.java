@@ -3,28 +3,27 @@ package com.github.ysbbbbbb.kaleidoscopetavern.event;
 import com.github.ysbbbbbb.kaleidoscopetavern.KaleidoscopeTavern;
 import com.github.ysbbbbbb.kaleidoscopetavern.blockentity.brew.PotionBottleBlockEntity;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.item.alchemy.Potion;
-import net.minecraft.world.item.alchemy.PotionUtils;
 import net.minecraft.world.item.alchemy.Potions;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.event.entity.player.PlayerInteractEvent;
-import net.minecraftforge.eventbus.api.EventPriority;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.bus.api.EventPriority;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 
 import static com.github.ysbbbbbb.kaleidoscopetavern.config.GeneralConfig.*;
 import static com.github.ysbbbbbb.kaleidoscopetavern.init.ModBlocks.*;
 
-@Mod.EventBusSubscriber(modid = KaleidoscopeTavern.MOD_ID)
+@EventBusSubscriber(modid = KaleidoscopeTavern.MOD_ID)
 public class VanillaBottlePlaceEvent {
     @SubscribeEvent(priority = EventPriority.LOW)
     public static void onRightClickBlock(PlayerInteractEvent.RightClickBlock event) {
@@ -56,9 +55,9 @@ public class VanillaBottlePlaceEvent {
         }
 
         event.setCanceled(true);
-        event.setCancellationResult(InteractionResult.sidedSuccess(level.isClientSide));
+        event.setCancellationResult(InteractionResult.SUCCESS);
 
-        if (level.isClientSide) {
+        if (level.isClientSide()) {
             return;
         }
 
@@ -78,8 +77,8 @@ public class VanillaBottlePlaceEvent {
 
     private static Placement getPlacement(ItemStack stack) {
         if (stack.is(Items.POTION)) {
-            Potion potion = PotionUtils.getPotion(stack);
-            if (potion == Potions.EMPTY || potion == Potions.WATER) {
+            var potion = stack.get(DataComponents.POTION_CONTENTS);
+            if (potion == null || potion.is(Potions.WATER)) {
                 return new Placement(WATER_BOTTLE.get(), WATER_BOTTLE_PLACEMENT.get(), false);
             }
             return new Placement(POTION_BOTTLE.get(), POTION_BOTTLE_PLACEMENT.get(), true);

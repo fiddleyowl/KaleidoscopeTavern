@@ -1,15 +1,19 @@
 package com.github.ysbbbbbb.kaleidoscopetavern.item;
 
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
-import net.minecraftforge.registries.RegistryObject;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.function.Supplier;
+
 public class StringLightsBlockItem extends BlockItem {
-    public StringLightsBlockItem(RegistryObject<Block> block) {
-        super(block.get(), new Properties());
+    public StringLightsBlockItem(Identifier id, Supplier<? extends Block> block) {
+        super(block.get(), new Properties().useBlockDescriptionPrefix().setId(ResourceKey.create(Registries.ITEM, id)));
     }
 
     @Override
@@ -17,4 +21,3 @@ public class StringLightsBlockItem extends BlockItem {
         return EquipmentSlot.CHEST;
     }
 }
-

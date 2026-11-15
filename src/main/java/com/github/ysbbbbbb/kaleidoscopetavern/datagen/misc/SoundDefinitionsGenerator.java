@@ -4,14 +4,13 @@ package com.github.ysbbbbbb.kaleidoscopetavern.datagen.misc;
 import com.github.ysbbbbbb.kaleidoscopetavern.KaleidoscopeTavern;
 import com.github.ysbbbbbb.kaleidoscopetavern.init.ModSounds;
 import net.minecraft.data.PackOutput;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.common.data.ExistingFileHelper;
-import net.minecraftforge.common.data.SoundDefinition;
-import net.minecraftforge.common.data.SoundDefinitionsProvider;
+import net.minecraft.resources.Identifier;
+import net.neoforged.neoforge.common.data.SoundDefinition;
+import net.neoforged.neoforge.common.data.SoundDefinitionsProvider;
 
 public class SoundDefinitionsGenerator extends SoundDefinitionsProvider {
-    public SoundDefinitionsGenerator(PackOutput output, ExistingFileHelper helper) {
-        super(output, KaleidoscopeTavern.MOD_ID, helper);
+    public SoundDefinitionsGenerator(PackOutput output) {
+        super(output, KaleidoscopeTavern.MOD_ID);
     }
 
     @Override
@@ -38,7 +37,7 @@ public class SoundDefinitionsGenerator extends SoundDefinitionsProvider {
     }
 
     protected static SoundDefinition.Sound sound(final String name) {
-        return sound(new ResourceLocation(KaleidoscopeTavern.MOD_ID, name));
+        return sound(Identifier.fromNamespaceAndPath(KaleidoscopeTavern.MOD_ID, name));
     }
 
     protected static String subtitle(String subtitle) {

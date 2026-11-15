@@ -1,5 +1,9 @@
 package com.github.ysbbbbbb.kaleidoscopetavern.block.deco;
 
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.Identifier;
+import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.entity.LivingEntity;
@@ -8,7 +12,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.block.*;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
@@ -34,23 +37,28 @@ public class PendantLampBlock extends HorizontalDirectionalBlock {
     public static final VoxelShape LOWER_NORTH_SOUTH_SHAPE = Block.box(1, 1, 5, 15, 16, 11);
     public static final VoxelShape LOWER_EAST_WEST_SHAPE = Block.box(5, 1, 1, 11, 16, 15);
 
-    public PendantLampBlock() {
-        super(Properties.of()
+    private static final MapCodec<PendantLampBlock> CODEC = simpleCodec(PendantLampBlock::new);
+
+    public PendantLampBlock(Identifier id) {
+        this(Properties.of().setId(ResourceKey.create(Registries.BLOCK, id))
                 .mapColor(MapColor.METAL)
                 .strength(0.8F)
                 .sound(SoundType.CHAIN)
                 .lightLevel(state -> state.getValue(HALF) == DoubleBlockHalf.UPPER ? 0 : 13)
                 .noOcclusion()
-                .noCollission()
+                .noCollision()
         );
+    }
+
+    public PendantLampBlock(Properties properties) {
+        super(properties);
         this.registerDefaultState(this.stateDefinition.any()
                 .setValue(HALF, DoubleBlockHalf.LOWER)
                 .setValue(FACING, Direction.NORTH));
     }
 
     @Override
-    public BlockState updateShape(BlockState state, Direction direction, BlockState neighborState,
-                                  LevelAccessor level, BlockPos pos, BlockPos neighborPos) {
+    public BlockState updateShape(BlockState state, net.minecraft.world.level.LevelReader level, net.minecraft.world.level.ScheduledTickAccess ticks, BlockPos pos, Direction direction, BlockPos neighborPos, BlockState neighborState, net.minecraft.util.RandomSource random) {
         DoubleBlockHalf half = state.getValue(HALF);
         boolean isLowerHalf = half == DoubleBlockHalf.LOWER && direction == Direction.UP;
         boolean isUpperHalf = half == DoubleBlockHalf.UPPER && direction == Direction.DOWN;
@@ -60,12 +68,12 @@ public class PendantLampBlock extends HorizontalDirectionalBlock {
             }
             return Blocks.AIR.defaultBlockState();
         }
-        return super.updateShape(state, direction, neighborState, level, pos, neighborPos);
+        return super.updateShape(state, level, ticks, pos, direction, neighborPos, neighborState, random);
     }
 
     @Override
-    public void playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
-        if (!level.isClientSide && player.isCreative() && state.getValue(HALF) == DoubleBlockHalf.UPPER) {
+    public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
+        if (!level.isClientSide() && player.isCreative() && state.getValue(HALF) == DoubleBlockHalf.UPPER) {
             BlockPos below = pos.below();
             BlockState belowState = level.getBlockState(below);
             if (belowState.is(state.getBlock()) && belowState.getValue(HALF) == DoubleBlockHalf.LOWER) {
@@ -74,7 +82,7 @@ public class PendantLampBlock extends HorizontalDirectionalBlock {
                 level.levelEvent(player, LevelEvent.PARTICLES_DESTROY_BLOCK, below, Block.getId(belowState));
             }
         }
-        super.playerWillDestroy(level, pos, state, player);
+        return super.playerWillDestroy(level, pos, state, player);
     }
 
     @Override
@@ -82,7 +90,7 @@ public class PendantLampBlock extends HorizontalDirectionalBlock {
     public BlockState getStateForPlacement(BlockPlaceContext context) {
         BlockPos pos = context.getClickedPos();
         Level level = context.getLevel();
-        if (pos.getY() > level.getMinBuildHeight() + 1 && level.getBlockState(pos.below()).canBeReplaced(context)) {
+        if (pos.getY() > level.getMinY() + 1 && level.getBlockState(pos.below()).canBeReplaced(context)) {
             return this.defaultBlockState()
                     .setValue(FACING, context.getHorizontalDirection())
                     .setValue(HALF, DoubleBlockHalf.UPPER);
@@ -117,5 +125,10 @@ public class PendantLampBlock extends HorizontalDirectionalBlock {
             case NORTH, SOUTH -> isLower ? LOWER_NORTH_SOUTH_SHAPE : UPPER_NORTH_SOUTH_SHAPE;
             default -> isLower ? LOWER_EAST_WEST_SHAPE : UPPER_EAST_WEST_SHAPE;
         };
+    }
+
+    @Override
+    protected MapCodec<? extends HorizontalDirectionalBlock> codec() {
+        return CODEC;
     }
 }

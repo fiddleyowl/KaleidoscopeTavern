@@ -4,11 +4,11 @@ import com.github.ysbbbbbb.kaleidoscopetavern.KaleidoscopeTavern;
 import com.github.ysbbbbbb.kaleidoscopetavern.compat.ponder.scene.BarrelScenes;
 import com.github.ysbbbbbb.kaleidoscopetavern.compat.ponder.scene.GrapevineScenes;
 import com.github.ysbbbbbb.kaleidoscopetavern.compat.ponder.scene.PressingTubScenes;
-import net.createmod.ponder.api.registration.PonderSceneRegistrationHelper;
-import net.minecraft.resources.ResourceLocation;
+import net.createmod.ponder.api.client.registration.PonderSceneRegistrationHelper;
+import net.minecraft.resources.Identifier;
 
 public class TavernPonderScreen {
-    public static void register(PonderSceneRegistrationHelper<ResourceLocation> helper) {
+    public static void register(PonderSceneRegistrationHelper<Identifier> helper) {
         helper.forComponents(KaleidoscopeTavern.modLoc("pressing_tub"))
                 .addStoryBoard("pressing_tub/introduction", PressingTubScenes::introduction)
                 .addStoryBoard("pressing_tub/introduction", PressingTubScenes::pressing)

@@ -6,15 +6,14 @@ import com.github.ysbbbbbb.kaleidoscopetavern.init.ModBlocks;
 import com.github.ysbbbbbb.kaleidoscopetavern.init.ModItems;
 import com.github.ysbbbbbb.kaleidoscopetavern.util.ColorUtils;
 import net.minecraft.ChatFormatting;
+import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.neoforged.neoforge.client.gui.GuiLayer;
 import net.minecraft.client.player.LocalPlayer;
-import net.minecraft.client.renderer.texture.TextureAtlas;
-import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.BlockPos;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.util.FastColor;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.Level;
@@ -22,19 +21,17 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
-import net.minecraftforge.client.gui.overlay.ForgeGui;
-import net.minecraftforge.client.gui.overlay.IGuiOverlay;
-import net.minecraftforge.items.ItemStackHandler;
+import net.neoforged.neoforge.items.ItemStackHandler;
 
 import java.util.Objects;
 
-public class ShakerOverlay implements IGuiOverlay {
-    private static final ResourceLocation IMG = new ResourceLocation(KaleidoscopeTavern.MOD_ID, "textures/gui/shaker.png");
-    private static final ResourceLocation ICON = new ResourceLocation(KaleidoscopeTavern.MOD_ID, "gui/rhombus");
+public class ShakerOverlay implements GuiLayer {
+    private static final Identifier IMG = KaleidoscopeTavern.modLoc("textures/gui/shaker.png");
+    private static final Identifier ICON = KaleidoscopeTavern.modLoc("gui/rhombus");
 
     @Override
-    public void render(ForgeGui gui, GuiGraphics guiGraphics, float partialTick, int screenWidth, int screenHeight) {
-        Minecraft minecraft = gui.getMinecraft();
+    public void render(GuiGraphicsExtractor guiGraphics, DeltaTracker deltaTracker) {
+        Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.gameMode == null || minecraft.gameMode.getPlayerMode() == GameType.SPECTATOR) {
             return;
         }
@@ -42,24 +39,27 @@ public class ShakerOverlay implements IGuiOverlay {
         if (player == null) {
             return;
         }
+        int screenWidth = guiGraphics.guiWidth();
+        int screenHeight = guiGraphics.guiHeight();
+        float partialTick = deltaTracker.getGameTimeDeltaPartialTick(false);
         // 如果指向雪克杯，提示内容
         this.renderShakerBlockTips(guiGraphics, screenWidth, screenHeight, minecraft, player);
         this.renderShakerProgress(guiGraphics, screenWidth, screenHeight, player, partialTick);
     }
 
-    private void renderShakerProgress(GuiGraphics guiGraphics, int screenWidth, int screenHeight, LocalPlayer player, float partialTick) {
+    private void renderShakerProgress(GuiGraphicsExtractor guiGraphics, int screenWidth, int screenHeight, LocalPlayer player, float partialTick) {
         // 如果手持雪克杯
         int remainingTicks = player.getUseItemRemainingTicks();
         if (remainingTicks > 0 && player.getUseItem().is(ModItems.SHAKER.get())) {
-            guiGraphics.blit(IMG, screenWidth / 2 - 91, screenHeight / 2 + 32, 0, 0, 181, 17);
+            guiGraphics.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, IMG, screenWidth / 2 - 91, screenHeight / 2 + 32, 0, 0, 181, 17, 256, 256);
 
             // 图标移动
             int offsetX = (int) Math.round((player.getTicksUsingItem() + partialTick) * 1.5);
-            guiGraphics.blit(IMG, screenWidth / 2 - 91 + offsetX, screenHeight / 2 + 26, 181, 0, 11, 13);
+            guiGraphics.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, IMG, screenWidth / 2 - 91 + offsetX, screenHeight / 2 + 26, 181, 0, 11, 13, 256, 256);
         }
     }
 
-    private void renderShakerBlockTips(GuiGraphics guiGraphics, int screenWidth, int screenHeight, Minecraft minecraft, LocalPlayer player) {
+    private void renderShakerBlockTips(GuiGraphicsExtractor guiGraphics, int screenWidth, int screenHeight, Minecraft minecraft, LocalPlayer player) {
         HitResult hitResult = minecraft.hitResult;
         if (!(hitResult instanceof BlockHitResult result)) {
             return;
@@ -88,8 +88,8 @@ public class ShakerOverlay implements IGuiOverlay {
             ChatFormatting chatFormatting = ColorUtils.ITEM_COLOR_CACHE.apply(stack.getItem());
             // 如果没有颜色匹配，渲染物品
             if (chatFormatting == ChatFormatting.RESET) {
-                guiGraphics.renderFakeItem(stack, x, y);
-                guiGraphics.renderItemDecorations(font, stack, x, y);
+                guiGraphics.fakeItem(stack, x, y);
+                guiGraphics.itemDecorations(font, stack, x, y);
             } else {
                 int color = Objects.requireNonNull(chatFormatting.getColor()) | 0xFF000000;
                 renderIcon(guiGraphics, x, y + 6, color);
@@ -99,12 +99,8 @@ public class ShakerOverlay implements IGuiOverlay {
     }
 
     @SuppressWarnings("deprecation")
-    private void renderIcon(GuiGraphics pGuiGraphics, int x, int y, int color) {
-        float alpha = FastColor.ARGB32.alpha(color) / 255f;
-        float red = FastColor.ARGB32.red(color) / 255f;
-        float green = FastColor.ARGB32.green(color) / 255f;
-        float blue = FastColor.ARGB32.blue(color) / 255f;
-        TextureAtlasSprite sprite = Minecraft.getInstance().getTextureAtlas(TextureAtlas.LOCATION_BLOCKS).apply(ICON);
-        pGuiGraphics.blit(x, y, 0, 16, 16, sprite, red, green, blue, alpha);
+    private void renderIcon(GuiGraphicsExtractor pGuiGraphicsExtractor, int x, int y, int color) {
+        pGuiGraphicsExtractor.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED,
+                KaleidoscopeTavern.modLoc("textures/gui/rhombus.png"), x, y, 0, 0, 16, 16, 16, 16, color);
     }
 }

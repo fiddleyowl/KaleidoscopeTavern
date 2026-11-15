@@ -1,23 +1,20 @@
 package com.github.ysbbbbbb.kaleidoscopetavern.crafting.recipe;
 
 import com.github.ysbbbbbb.kaleidoscopetavern.crafting.container.BarrelRecipeContainer;
+import com.github.ysbbbbbb.kaleidoscopetavern.crafting.serializer.BarrelRecipeSerializer;
 import com.github.ysbbbbbb.kaleidoscopetavern.init.ModRecipes;
-import net.minecraft.core.NonNullList;
-import net.minecraft.core.RegistryAccess;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraft.world.item.crafting.Recipe;
-import net.minecraft.world.item.crafting.RecipeSerializer;
-import net.minecraft.world.item.crafting.RecipeType;
+import net.minecraft.world.item.ItemStackTemplate;
+import net.minecraft.world.item.crafting.*;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.material.Fluid;
-import net.minecraftforge.common.util.RecipeMatcher;
+import net.neoforged.neoforge.common.util.RecipeMatcher;
+
+import java.util.List;
 
 /**
  * 酒桶的配方类
  *
- * @param id          配方 ID
  * @param ingredients 酒桶输入的原料，没有数量参数，最大只允许 4 种物品输入。可以有 0 种物品输入，此时表示只使用流体酿造
  * @param fluid       酒桶输入的流体，只能有一个流体输入
  * @param carrier     酒桶的容器，可以是放在龙头下方的方块，也可以是龙头下方的掉落物
@@ -27,13 +24,14 @@ import net.minecraftforge.common.util.RecipeMatcher;
  *                    n 为当前阶段数（从 1 开始）。例如，unitTime 为 100，则第一阶段持续 100 tick，第二阶段持续 200 tick，以此类推
  */
 public record BarrelRecipe(
-        ResourceLocation id,
-        NonNullList<Ingredient> ingredients,
+        List<Ingredient> ingredients,
         Fluid fluid,
         Ingredient carrier,
-        ItemStack result,
+        ItemStackTemplate result,
         int unitTime
 ) implements Recipe<BarrelRecipeContainer> {
+    public static final RecipeSerializer<BarrelRecipe> SERIALIZER = new RecipeSerializer<>(BarrelRecipeSerializer.CODEC, BarrelRecipeSerializer.STREAM_CODEC);
+
     @Override
     public boolean matches(BarrelRecipeContainer container, Level level) {
         boolean emptyIngredients = this.ingredients.stream().allMatch(Ingredient::isEmpty);
@@ -43,11 +41,11 @@ public record BarrelRecipe(
         }
         // 否则匹配输入的流体和物品
         return container.getFluid().isSame(this.fluid)
-               && RecipeMatcher.findMatches(container.items, ingredients) != null;
+               && RecipeMatcher.findMatches(container.getItems(), ingredients) != null;
     }
 
     @Override
-    public ItemStack assemble(BarrelRecipeContainer container, RegistryAccess registryAccess) {
+    public ItemStack assemble(BarrelRecipeContainer container) {
         // 遍历容器，找出数量最少的输入物品数量，作为酿造结果的数量
         // 默认数量为 16，超过这个数量的输入物品不会增加输出物品的数量
         int count = 16;
@@ -56,32 +54,32 @@ public record BarrelRecipe(
                 count = Math.min(count, itemStack.getCount());
             }
         }
-        return getResultItem(registryAccess).copyWithCount(count);
+        return this.result.withCount(count).create();
     }
 
     @Override
-    public NonNullList<Ingredient> getIngredients() {
-        return this.ingredients;
+    public boolean showNotification() {
+        return false;
     }
 
     @Override
-    public ItemStack getResultItem(RegistryAccess registryAccess) {
-        return this.result;
+    public String group() {
+        return "";
     }
 
     @Override
-    public ResourceLocation getId() {
-        return this.id;
-    }
-
-    @Override
-    public RecipeSerializer<?> getSerializer() {
+    public RecipeSerializer<? extends Recipe<BarrelRecipeContainer>> getSerializer() {
         return ModRecipes.BARREL_SERIALIZER.get();
     }
 
     @Override
-    public RecipeType<?> getType() {
-        return ModRecipes.BARREL_RECIPE;
+    public RecipeType<? extends Recipe<BarrelRecipeContainer>> getType() {
+        return ModRecipes.BARREL_RECIPE.get();
+    }
+
+    @Override
+    public RecipeBookCategory recipeBookCategory() {
+        return ModRecipes.BARREL_RECIPE_CATEGORY.get();
     }
 
     @Override
@@ -90,7 +88,7 @@ public record BarrelRecipe(
     }
 
     @Override
-    public boolean canCraftInDimensions(int width, int height) {
-        return false;
+    public PlacementInfo placementInfo() {
+        return PlacementInfo.NOT_PLACEABLE;
     }
 }

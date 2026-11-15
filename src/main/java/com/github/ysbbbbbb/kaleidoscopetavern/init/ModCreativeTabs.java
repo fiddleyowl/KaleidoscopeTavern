@@ -5,13 +5,14 @@ import com.github.ysbbbbbb.kaleidoscopetavern.item.BottleBlockItem;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.CreativeModeTab;
-import net.minecraftforge.registries.DeferredRegister;
-import net.minecraftforge.registries.RegistryObject;
+import net.neoforged.neoforge.registries.DeferredRegister;
+
+import java.util.function.Supplier;
 
 public interface ModCreativeTabs {
     DeferredRegister<CreativeModeTab> TABS = DeferredRegister.create(Registries.CREATIVE_MODE_TAB, KaleidoscopeTavern.MOD_ID);
 
-    RegistryObject<CreativeModeTab> TAVERN_MAIN_TAB = TABS.register("tavern_main", () -> CreativeModeTab.builder()
+    Supplier<CreativeModeTab> TAVERN_MAIN_TAB = TABS.register("tavern_main", () -> CreativeModeTab.builder()
             .title(Component.translatable("item_group.kaleidoscope_tavern.tavern_main.name"))
             .icon(ModItems.WINE.get()::getDefaultInstance)
             .displayItems((par, output) -> {
@@ -95,10 +96,10 @@ public interface ModCreativeTabs {
                 output.accept(ModItems.SCULK_SPECIAL.get());
             }).build());
 
-    RegistryObject<CreativeModeTab> TAVERN_DECO_TAB = TABS.register("tavern_deco", () -> CreativeModeTab.builder()
+    Supplier<CreativeModeTab> TAVERN_DECO_TAB = TABS.register("tavern_deco", () -> CreativeModeTab.builder()
             .title(Component.translatable("item_group.kaleidoscope_tavern.tavern_deco.name"))
             .icon(ModItems.STEPLADDER.get()::getDefaultInstance)
-            .withTabsBefore(TAVERN_MAIN_TAB.getId())
+            .withTabsBefore(KaleidoscopeTavern.modLoc("tavern_main"))
             .displayItems((par, output) -> {
                 output.accept(ModItems.BAR_CABINET.get());
                 output.accept(ModItems.GLASS_BAR_CABINET.get());

@@ -1,22 +1,19 @@
 package com.github.ysbbbbbb.kaleidoscopetavern.blockentity.mixology;
 
-import com.github.ysbbbbbb.kaleidoscopetavern.KaleidoscopeTavern;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import com.github.ysbbbbbb.kaleidoscopetavern.blockentity.BaseBlockEntity;
 import com.github.ysbbbbbb.kaleidoscopetavern.datamap.data.DrinkEffectData;
 import com.github.ysbbbbbb.kaleidoscopetavern.init.ModBlocks;
 import com.google.common.collect.Lists;
 import com.mojang.serialization.Codec;
 import net.minecraft.core.BlockPos;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.NbtOps;
-import net.minecraft.nbt.Tag;
 import net.minecraft.world.level.block.state.BlockState;
 
 import java.util.List;
 
 public class SignatureCocktailBlockEntity extends BaseBlockEntity {
-    private static final Codec<List<DrinkEffectData.Entry>> EFFECTS_CODEC = Codec.list(DrinkEffectData.Entry.ENTRY_CODEC);
+    private static final Codec<List<DrinkEffectData.Entry>> EFFECTS_CODEC = Codec.list(DrinkEffectData.Entry.CODEC);
 
     private List<DrinkEffectData.Entry> effects = Lists.newArrayList();
     private int color = 0x5555ff;
@@ -26,26 +23,17 @@ public class SignatureCocktailBlockEntity extends BaseBlockEntity {
     }
 
     @Override
-    public void load(CompoundTag tag) {
-        super.load(tag);
-        if (tag.contains("effects")) {
-            ListTag tagList = tag.getList("effects", Tag.TAG_COMPOUND);
-            EFFECTS_CODEC.decode(NbtOps.INSTANCE, tagList)
-                    .resultOrPartial(KaleidoscopeTavern.LOGGER::error)
-                    .ifPresent(r -> this.effects = r.getFirst());
-        }
-        if (tag.contains("color")) {
-            this.color = tag.getInt("color");
-        }
+    protected void loadAdditional(ValueInput input) {
+        super.loadAdditional(input);
+        this.effects = input.read("effects", EFFECTS_CODEC).orElse(List.of());
+        this.color = input.getIntOr("color", 0x5555ff);
     }
 
     @Override
-    protected void saveAdditional(CompoundTag tag) {
-        super.saveAdditional(tag);
-        EFFECTS_CODEC.encodeStart(NbtOps.INSTANCE, this.effects)
-                .result()
-                .ifPresent(r -> tag.put("effects", r));
-        tag.putInt("color", this.color);
+    protected void saveAdditional(ValueOutput output) {
+        super.saveAdditional(output);
+        output.store("effects", EFFECTS_CODEC, this.effects);
+        output.putInt("color", this.color);
     }
 
     public List<DrinkEffectData.Entry> getEffects() {

@@ -4,7 +4,6 @@ import com.github.ysbbbbbb.kaleidoscopetavern.KaleidoscopeTavern;
 import com.github.ysbbbbbb.kaleidoscopetavern.item.StringLightsBlockItem;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.common.util.LazyOptional;
 import top.theillusivec4.curios.api.CuriosApi;
 import top.theillusivec4.curios.api.type.capability.ICuriosItemHandler;
 import top.theillusivec4.curios.api.type.inventory.IDynamicStackHandler;
@@ -22,8 +21,8 @@ class CuriosCompatInner {
     }
 
     static Optional<ItemStack> findStringLights(LivingEntity entity) {
-        LazyOptional<ICuriosItemHandler> inventory = CuriosApi.getCuriosInventory(entity);
-        return inventory.resolve().flatMap(handler -> handler.getCurios().values().stream()
+        Optional<ICuriosItemHandler> inventory = CuriosApi.getCuriosInventory(entity);
+        return inventory.flatMap(handler -> handler.getCurios().values().stream()
                 .flatMap(stacksHandler -> findInStacksHandler(stacksHandler).stream())
                 .findFirst()
                 .map(ItemStack::copy));

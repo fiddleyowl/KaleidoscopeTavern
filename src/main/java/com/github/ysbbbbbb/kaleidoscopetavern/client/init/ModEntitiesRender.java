@@ -7,19 +7,16 @@ import com.github.ysbbbbbb.kaleidoscopetavern.client.model.deco.LargeChalkboardM
 import com.github.ysbbbbbb.kaleidoscopetavern.client.model.deco.SmallChalkboardModel;
 import com.github.ysbbbbbb.kaleidoscopetavern.client.model.mixology.ShakerModel;
 import com.github.ysbbbbbb.kaleidoscopetavern.client.render.entity.SitRenderer;
-import com.github.ysbbbbbb.kaleidoscopetavern.client.render.entity.StringLightsLayer;
 import com.github.ysbbbbbb.kaleidoscopetavern.client.render.entity.ThrownMolotovRenderer;
 import com.github.ysbbbbbb.kaleidoscopetavern.entity.SitEntity;
 import com.github.ysbbbbbb.kaleidoscopetavern.entity.ThrownMolotovEntity;
 import net.minecraft.client.renderer.entity.EntityRenderers;
-import net.minecraft.client.renderer.entity.LivingEntityRenderer;
-import net.minecraft.world.entity.EntityType;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.EntityRenderersEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 
-@Mod.EventBusSubscriber(value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.MOD)
+@EventBusSubscriber(value = Dist.CLIENT)
 public class ModEntitiesRender {
     @SubscribeEvent
     public static void onEntityRenderers(EntityRenderersEvent.RegisterRenderers evt) {
@@ -35,21 +32,21 @@ public class ModEntitiesRender {
         event.registerLayerDefinition(BarrelModel.LAYER_LOCATION, BarrelModel::createBodyLayer);
         event.registerLayerDefinition(ShakerModel.LAYER_LOCATION, ShakerModel::createBodyLayer);
     }
-
     @SubscribeEvent
-    @SuppressWarnings("all")
+    @SuppressWarnings({"rawtypes", "unchecked"})
     public static void onAddLayers(EntityRenderersEvent.AddLayers event) {
-        // 给玩家添加彩灯挂件渲染层
-        for (String skin : event.getSkins()) {
-            LivingEntityRenderer renderer = event.getSkin(skin);
-            if (renderer != null) {
-                renderer.addLayer(new StringLightsLayer<>(renderer));
+        for (var type : event.getEntityTypes()) {
+            var renderer = event.getRenderer(type);
+            if (renderer instanceof net.minecraft.client.renderer.entity.LivingEntityRenderer living
+                    && living.getModel() instanceof net.minecraft.client.model.HumanoidModel) {
+                living.addLayer(new com.github.ysbbbbbb.kaleidoscopetavern.client.render.entity.StringLightsLayer(living));
             }
         }
-        // 盔甲架
-        LivingEntityRenderer renderer = event.getRenderer(EntityType.ARMOR_STAND);
-        if (renderer != null) {
-            renderer.addLayer(new StringLightsLayer<>(renderer));
+        for (var skin : event.getSkins()) {
+            var player = event.getPlayerRenderer(skin);
+            if (player != null) player.addLayer(new com.github.ysbbbbbb.kaleidoscopetavern.client.render.entity.StringLightsLayer<>(player));
+            var mannequin = event.getMannequinRenderer(skin);
+            if (mannequin != null) mannequin.addLayer(new com.github.ysbbbbbb.kaleidoscopetavern.client.render.entity.StringLightsLayer<>(mannequin));
         }
     }
 }

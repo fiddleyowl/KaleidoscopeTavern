@@ -1,30 +1,29 @@
 package com.github.ysbbbbbb.kaleidoscopetavern.datagen.builder;
 
 import com.github.ysbbbbbb.kaleidoscopetavern.KaleidoscopeTavern;
+import com.github.ysbbbbbb.kaleidoscopetavern.crafting.recipe.PressingTubRecipe;
 import com.github.ysbbbbbb.kaleidoscopetavern.crafting.serializer.PressingTubRecipeSerializer;
-import com.github.ysbbbbbb.kaleidoscopetavern.init.ModRecipes;
-import com.google.gson.JsonObject;
-import net.minecraft.advancements.CriterionTriggerInstance;
-import net.minecraft.data.recipes.FinishedRecipe;
+import net.minecraft.advancements.Criterion;
+import net.minecraft.core.HolderSet;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.data.recipes.RecipeBuilder;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.tags.TagKey;
+import net.minecraft.data.recipes.RecipeOutput;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStackTemplate;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraft.world.item.crafting.RecipeSerializer;
+import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.level.ItemLike;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.Fluids;
-import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.Nullable;
-
-import java.util.Objects;
-import java.util.function.Consumer;
 
 public class PressingTubBuilder implements RecipeBuilder {
     private static final String NAME = "pressing_tub";
 
-    private Ingredient ingredient = Ingredient.EMPTY;
+    private Ingredient ingredient = Ingredient.of(Items.GRASS_BLOCK);
     private Fluid fluid = Fluids.WATER;
     private int fluidAmount = PressingTubRecipeSerializer.DEFAULT_FLUID_AMOUNT;
 
@@ -37,8 +36,8 @@ public class PressingTubBuilder implements RecipeBuilder {
         return this;
     }
 
-    public PressingTubBuilder setIngredient(TagKey<Item> itemLike) {
-        this.ingredient = Ingredient.of(itemLike);
+    public PressingTubBuilder setIngredient(HolderSet<Item> holders) {
+        this.ingredient = Ingredient.of(holders);
         return this;
     }
 
@@ -53,7 +52,7 @@ public class PressingTubBuilder implements RecipeBuilder {
     }
 
     @Override
-    public RecipeBuilder unlockedBy(String name, CriterionTriggerInstance trigger) {
+    public RecipeBuilder unlockedBy(String name, Criterion<?> trigger) {
         return this;
     }
 
@@ -63,69 +62,16 @@ public class PressingTubBuilder implements RecipeBuilder {
     }
 
     @Override
-    public Item getResult() {
-        return this.fluid.getBucket();
+    public ResourceKey<Recipe<?>> defaultId() {
+        ItemStackTemplate stack = new ItemStackTemplate(this.fluid.getBucket());
+        String path = RecipeBuilder.getDefaultRecipeId(stack).identifier().getPath();
+        Identifier filePath = KaleidoscopeTavern.modLoc(NAME + "/" + path);
+        return ResourceKey.create(Registries.RECIPE, filePath);
     }
 
     @Override
-    public void save(Consumer<FinishedRecipe> output) {
-        String path = RecipeBuilder.getDefaultRecipeId(this.getResult()).getPath();
-        ResourceLocation filePath = KaleidoscopeTavern.modLoc(NAME + "/" + path);
-        this.save(output, filePath);
-    }
-
-    @Override
-    public void save(Consumer<FinishedRecipe> output, String recipeId) {
-        ResourceLocation filePath = KaleidoscopeTavern.modLoc(NAME + "/" + recipeId);
-        this.save(output, filePath);
-    }
-
-    @Override
-    public void save(Consumer<FinishedRecipe> recipeOutput, ResourceLocation id) {
-        recipeOutput.accept(new PressingTubFinishedRecipe(id, this.ingredient, this.fluid, this.fluidAmount));
-    }
-
-    public static class PressingTubFinishedRecipe implements FinishedRecipe {
-        private final ResourceLocation id;
-        private final Ingredient ingredient;
-        private final Fluid fluid;
-        private final int fluidAmount;
-
-        public PressingTubFinishedRecipe(ResourceLocation id, Ingredient ingredient, Fluid fluid, int fluidAmount) {
-            this.id = id;
-            this.ingredient = ingredient;
-            this.fluid = fluid;
-            this.fluidAmount = fluidAmount;
-        }
-
-        @Override
-        public void serializeRecipeData(JsonObject json) {
-            json.add("ingredient", this.ingredient.toJson());
-            ResourceLocation fluidId = Objects.requireNonNull(ForgeRegistries.FLUIDS.getKey(this.fluid));
-            json.addProperty("fluid", fluidId.toString());
-            json.addProperty("fluid_amount", this.fluidAmount);
-        }
-
-        @Override
-        public ResourceLocation getId() {
-            return this.id;
-        }
-
-        @Override
-        public RecipeSerializer<?> getType() {
-            return ModRecipes.PRESSING_TUB_SERIALIZER.get();
-        }
-
-        @Override
-        @Nullable
-        public JsonObject serializeAdvancement() {
-            return null;
-        }
-
-        @Override
-        @Nullable
-        public ResourceLocation getAdvancementId() {
-            return null;
-        }
+    public void save(RecipeOutput output, ResourceKey<Recipe<?>> key) {
+        PressingTubRecipe recipe = new PressingTubRecipe(this.ingredient, this.fluid, this.fluidAmount);
+        output.accept(key, recipe, null);
     }
 }

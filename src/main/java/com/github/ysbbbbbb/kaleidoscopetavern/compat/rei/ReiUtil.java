@@ -11,11 +11,11 @@ import java.util.List;
 
 public class ReiUtil {
     public static EntryIngredient ofIngredient(Ingredient ingredient) {
-        return EntryIngredient.of(Arrays.stream(ingredient.getItems()).map(EntryStacks::of).toList());
+        return EntryIngredient.of(ingredient.items().map(holder -> new ItemStack(holder)).map(EntryStacks::of).toList());
     }
 
     public static EntryIngredient ofIngredient(Ingredient ingredient, int count) {
-        return EntryIngredient.of(Arrays.stream(ingredient.getItems())
+        return EntryIngredient.of(ingredient.items().map(holder -> new ItemStack(holder))
                 .map(s -> EntryStacks.of(s.copyWithCount(count)))
                 .toList());
     }

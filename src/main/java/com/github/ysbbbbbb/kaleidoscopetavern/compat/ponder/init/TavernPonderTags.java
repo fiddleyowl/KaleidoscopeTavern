@@ -2,17 +2,17 @@ package com.github.ysbbbbbb.kaleidoscopetavern.compat.ponder.init;
 
 import com.github.ysbbbbbb.kaleidoscopetavern.KaleidoscopeTavern;
 import com.github.ysbbbbbb.kaleidoscopetavern.init.ModItems;
-import net.createmod.ponder.api.registration.PonderTagRegistrationHelper;
-import net.minecraft.resources.ResourceLocation;
+import net.createmod.ponder.api.client.registration.PonderTagRegistrationHelper;
+import net.minecraft.resources.Identifier;
 
 import java.util.Objects;
 
 public class TavernPonderTags {
-    public static final ResourceLocation BREWING = new ResourceLocation(KaleidoscopeTavern.MOD_ID, "brewing");
+    public static final Identifier BREWING = KaleidoscopeTavern.modLoc("brewing");
 
-    public static void register(PonderTagRegistrationHelper<ResourceLocation> helper) {
+    public static void register(PonderTagRegistrationHelper<Identifier> helper) {
         helper.registerTag(BREWING).addToIndex()
-                .item(ModItems.WINE.get(), true, false)
+                .icon("brewing")
                 .title("")
                 .description("")
                 .register();

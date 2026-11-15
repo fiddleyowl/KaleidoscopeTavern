@@ -1,23 +1,24 @@
 package com.github.ysbbbbbb.kaleidoscopetavern.client.model.mixology;
 
 import com.github.ysbbbbbb.kaleidoscopetavern.KaleidoscopeTavern;
-import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexConsumer;
-import net.minecraft.client.model.HierarchicalModel;
+import net.minecraft.client.model.Model;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
+import com.github.ysbbbbbb.kaleidoscopetavern.client.render.block.state.ShakerRenderState;
+import com.github.ysbbbbbb.kaleidoscopetavern.client.animation.ShakerAnimation;
+import net.minecraft.client.animation.KeyframeAnimation;
 import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.PartPose;
 import net.minecraft.client.model.geom.builders.*;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.entity.Entity;
 
-public class ShakerModel extends HierarchicalModel<Entity> {
-    public static final ModelLayerLocation LAYER_LOCATION = new ModelLayerLocation(new ResourceLocation(KaleidoscopeTavern.MOD_ID, "shaker"), "main");
+public class ShakerModel extends Model<ShakerRenderState> {
+    public static final ModelLayerLocation LAYER_LOCATION = new ModelLayerLocation(KaleidoscopeTavern.modLoc("shaker"), "main");
 
-    private final ModelPart root;
+    private final KeyframeAnimation putAnimation;
 
     public ShakerModel(ModelPart root) {
-        this.root = root.getChild("root");
+        super(root.getChild("root"), RenderTypes::entityCutout);
+        this.putAnimation = ShakerAnimation.PUT.bake(this.root());
     }
 
     public static LayerDefinition createBodyLayer() {
@@ -35,18 +36,8 @@ public class ShakerModel extends HierarchicalModel<Entity> {
     }
 
     @Override
-    public ModelPart root() {
-        return this.root;
-    }
-
-    @Override
-    public void setupAnim(Entity entity, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
-    }
-
-    @Override
-    public void renderToBuffer(PoseStack poseStack, VertexConsumer consumer, int packedLight,
-                               int packedOverlay, float red, float green, float blue, float alpha
-    ) {
-        root.render(poseStack, consumer, packedLight, packedOverlay, red, green, blue, alpha);
+    public void setupAnim(ShakerRenderState state) {
+        this.root().getAllParts().forEach(ModelPart::resetPose);
+        if (state.putMillis >= 0) this.putAnimation.apply(state.putMillis, 1.0F);
     }
 }

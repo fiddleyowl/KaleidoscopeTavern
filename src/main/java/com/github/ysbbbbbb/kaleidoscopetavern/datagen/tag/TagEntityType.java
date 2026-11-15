@@ -7,15 +7,13 @@ import net.minecraft.data.PackOutput;
 import net.minecraft.data.tags.EntityTypeTagsProvider;
 import net.minecraft.tags.EntityTypeTags;
 import net.minecraft.world.entity.EntityType;
-import net.minecraftforge.common.data.ExistingFileHelper;
-import org.jetbrains.annotations.Nullable;
+
 
 import java.util.concurrent.CompletableFuture;
 
 public class TagEntityType extends EntityTypeTagsProvider {
-    public TagEntityType(PackOutput output, CompletableFuture<HolderLookup.Provider> lookupProvider,
-                         @Nullable ExistingFileHelper existingFileHelper) {
-        super(output, lookupProvider, KaleidoscopeTavern.MOD_ID, existingFileHelper);
+    public TagEntityType(PackOutput output, CompletableFuture<HolderLookup.Provider> lookupProvider) {
+        super(output, lookupProvider, KaleidoscopeTavern.MOD_ID);
     }
 
     @Override
@@ -24,7 +22,7 @@ public class TagEntityType extends EntityTypeTagsProvider {
                 // 骷髅类（骷髅、流浪者、凋零骷髅）
                 .addTag(EntityTypeTags.SKELETONS)
                 // 僵尸类
-                .add(EntityType.ZOMBIE, EntityType.ZOMBIE_VILLAGER, EntityType.DROWNED, EntityType.HUSK)
+                .addTag(EntityTypeTags.ZOMBIES)
                 // 猪灵类
                 .add(EntityType.PIGLIN, EntityType.PIGLIN_BRUTE, EntityType.ZOMBIFIED_PIGLIN)
                 // 灾厄村民

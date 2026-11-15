@@ -4,11 +4,12 @@ import com.github.ysbbbbbb.kaleidoscopetavern.blockentity.BaseBlockEntity;
 import com.github.ysbbbbbb.kaleidoscopetavern.entity.SitEntity;
 import com.github.ysbbbbbb.kaleidoscopetavern.init.ModBlocks;
 import net.minecraft.core.BlockPos;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import org.jetbrains.annotations.Nullable;
 
 public class BarStoolBlockEntity extends BaseBlockEntity {
@@ -48,12 +49,12 @@ public class BarStoolBlockEntity extends BaseBlockEntity {
     }
 
     @Override
-    public void load(CompoundTag tag) {
-        super.load(tag);
+    public void loadAdditional(ValueInput input) {
+        super.loadAdditional(input);
 
         if (this.level != null) {
-            int sitId = tag.getInt("SitEntityId");
-            if (level.getEntity(sitId) instanceof SitEntity sit
+            int sitId = input.getIntOr("SitEntityId", -1);
+            if (sitId > 0 && level.getEntity(sitId) instanceof SitEntity sit
                 && sit.blockPosition().equals(this.worldPosition)
             ) {
                 this.sitEntity = sit;
@@ -66,12 +67,12 @@ public class BarStoolBlockEntity extends BaseBlockEntity {
     }
 
     @Override
-    protected void saveAdditional(CompoundTag tag) {
-        super.saveAdditional(tag);
+    protected void saveAdditional(ValueOutput output) {
+        super.saveAdditional(output);
         if (this.sitEntity != null && this.sitEntity.isAlive()
             && this.sitEntity.blockPosition().equals(this.worldPosition)
         ) {
-            tag.putInt("SitEntityId", this.sitEntity.getId());
+            output.putInt("SitEntityId", this.sitEntity.getId());
         }
     }
 

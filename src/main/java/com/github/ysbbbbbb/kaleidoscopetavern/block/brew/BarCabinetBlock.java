@@ -4,23 +4,28 @@ import com.github.ysbbbbbb.kaleidoscopetavern.block.properties.PositionType;
 import com.github.ysbbbbbb.kaleidoscopetavern.blockentity.brew.BarCabinetBlockEntity;
 import com.github.ysbbbbbb.kaleidoscopetavern.init.tag.TagMod;
 import com.github.ysbbbbbb.kaleidoscopetavern.item.BottleBlockItem;
+import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.LevelAccessor;
+import net.minecraft.world.level.LevelReader;
+import net.minecraft.world.level.ScheduledTickAccess;
 import net.minecraft.world.level.block.*;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
-import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.level.material.MapColor;
 import net.minecraft.world.level.storage.loot.LootParams;
@@ -32,11 +37,13 @@ import java.util.List;
 
 @SuppressWarnings("deprecation")
 public class BarCabinetBlock extends BaseEntityBlock {
-    public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
+    public static final MapCodec<BarCabinetBlock> CODEC = simpleCodec(BarCabinetBlock::new);
+    public static final EnumProperty<Direction> FACING = BlockStateProperties.HORIZONTAL_FACING;
     public static final EnumProperty<PositionType> POSITION = EnumProperty.create("position", PositionType.class);
 
-    public BarCabinetBlock() {
+    public BarCabinetBlock(Identifier id) {
         super(Properties.of()
+                .setId(ResourceKey.create(Registries.BLOCK, id))
                 .mapColor(MapColor.WOOD)
                 .strength(2.5F)
                 .sound(SoundType.WOOD)
@@ -47,15 +54,18 @@ public class BarCabinetBlock extends BaseEntityBlock {
                 .setValue(POSITION, PositionType.SINGLE));
     }
 
+    public BarCabinetBlock(Properties properties) {
+        super(properties);
+    }
+
     @Override
-    public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player,
-                                 InteractionHand hand, BlockHitResult hitResult) {
-        if (level.isClientSide || hand != InteractionHand.MAIN_HAND) {
+    public InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
+                                       Player player, InteractionHand hand, BlockHitResult hitResult) {
+        if (level.isClientSide() || hand != InteractionHand.MAIN_HAND) {
             return InteractionResult.PASS;
         }
 
         Direction direction = state.getValue(FACING);
-        ItemStack stack = player.getItemInHand(hand);
 
         // 判断点击的是左侧还是右侧
         boolean isLeftSide = switch (direction) {
@@ -68,16 +78,21 @@ public class BarCabinetBlock extends BaseEntityBlock {
 
         if (level.getBlockEntity(pos) instanceof BarCabinetBlockEntity barCabinet
             && this.onClick(barCabinet, player, stack, isLeftSide)) {
-            float pitch = stack.isEmpty() ? level.random.nextFloat() * 0.2F + 0.8F : level.random.nextFloat() * 0.2F + 0.2F;
+            float pitch = stack.isEmpty() ? level.getRandom().nextFloat() * 0.2F + 0.8F : level.getRandom().nextFloat() * 0.2F + 0.2F;
             level.playSound(null, pos, SoundEvents.GLASS_PLACE, SoundSource.BLOCKS,
-                    level.random.nextFloat() * 0.2F + 0.8F, pitch);
+                    level.getRandom().nextFloat() * 0.2F + 0.8F, pitch);
             return InteractionResult.SUCCESS;
         }
 
-        return super.use(state, level, pos, player, hand, hitResult);
+        return super.useItemOn(stack, state, level, pos, player, hand, hitResult);
     }
 
     private boolean onClick(BarCabinetBlockEntity barCabinet, Player player, ItemStack stack, boolean isLeftSide) {
+        // 冒险模式下不允许交互
+        if (!player.mayBuild()) {
+            return false;
+        }
+
         // 如果是异形酒瓶，那么永远都是 isLeftSide = true，放在左边
         boolean irregular = false;
         boolean single = barCabinet.isSingle();
@@ -179,8 +194,9 @@ public class BarCabinetBlock extends BaseEntityBlock {
     }
 
     @Override
-    public BlockState updateShape(BlockState state, Direction direction, BlockState neighborState,
-                                  LevelAccessor level, BlockPos pos, BlockPos neighborPos) {
+    public BlockState updateShape(BlockState state, LevelReader level, ScheduledTickAccess ticks,
+                                  BlockPos pos, Direction direction, BlockPos neighborPos,
+                                  BlockState neighborState, RandomSource random) {
         Direction self = state.getValue(FACING);
         Direction left = self.getClockWise();
         Direction right = self.getCounterClockWise();
@@ -219,7 +235,7 @@ public class BarCabinetBlock extends BaseEntityBlock {
                 }
             }
         }
-        return super.updateShape(state, direction, neighborState, level, pos, neighborPos);
+        return super.updateShape(state, level, ticks, pos, direction, neighborPos, neighborState, random);
     }
 
     @Override
@@ -276,6 +292,11 @@ public class BarCabinetBlock extends BaseEntityBlock {
     @Nullable
     public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
         return new BarCabinetBlockEntity(pos, state);
+    }
+
+    @Override
+    protected MapCodec<? extends BaseEntityBlock> codec() {
+        return CODEC;
     }
 
     @Override

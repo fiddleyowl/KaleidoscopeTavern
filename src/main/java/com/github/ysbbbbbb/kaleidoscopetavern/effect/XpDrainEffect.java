@@ -18,18 +18,18 @@ public class XpDrainEffect extends BaseEffect {
     }
 
     @Override
-    public boolean isDurationEffectTick(int duration, int amplifier) {
+    public boolean shouldApplyEffectTickThisTick(int duration, int amplifier) {
         return true;
     }
 
     @Override
-    public void applyEffectTick(LivingEntity livingEntity, int amplifier) {
+    public boolean applyEffectTick(net.minecraft.server.level.ServerLevel serverLevel, LivingEntity livingEntity, int amplifier) {
         if (!(livingEntity instanceof Player player)) {
-            return;
+            return true;
         }
         Level level = player.level();
         if (level.isClientSide()) {
-            return;
+            return true;
         }
 
         // 消除经验球拾取冷却
@@ -37,7 +37,7 @@ public class XpDrainEffect extends BaseEffect {
 
         // 每 5 tick 检查一次
         if (player.tickCount % 5 != 0) {
-            return;
+            return true;
         }
 
         // 吸引8格内的经验球
@@ -60,5 +60,6 @@ public class XpDrainEffect extends BaseEffect {
                 orb.setDeltaMovement(direction.scale(speed));
             }
         }
+        return true;
     }
 }

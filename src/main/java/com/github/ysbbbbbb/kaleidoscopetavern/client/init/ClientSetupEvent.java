@@ -1,34 +1,30 @@
 package com.github.ysbbbbbb.kaleidoscopetavern.client.init;
 
+import com.github.ysbbbbbb.kaleidoscopetavern.init.ModItems;
+import com.github.ysbbbbbb.kaleidoscopetavern.client.render.misc.SignatureCocktailColor;
+import com.github.ysbbbbbb.kaleidoscopetavern.client.render.misc.PotionBottleColor;
+import net.neoforged.neoforge.client.extensions.common.RegisterClientExtensionsEvent;
+import net.neoforged.neoforge.client.event.RegisterGuiLayersEvent;
+import net.neoforged.neoforge.client.event.RegisterColorHandlersEvent;
+import static net.neoforged.neoforge.client.gui.VanillaGuiLayers.CROSSHAIR;
 import com.github.ysbbbbbb.kaleidoscopetavern.KaleidoscopeTavern;
 import com.github.ysbbbbbb.kaleidoscopetavern.client.animation.ShakerAnimation;
 import com.github.ysbbbbbb.kaleidoscopetavern.client.gui.overlay.ShakerOverlay;
 import com.github.ysbbbbbb.kaleidoscopetavern.client.render.block.*;
-import com.github.ysbbbbbb.kaleidoscopetavern.client.render.misc.PotionBottleColor;
-import com.github.ysbbbbbb.kaleidoscopetavern.client.render.misc.SignatureCocktailColor;
-import com.github.ysbbbbbb.kaleidoscopetavern.compat.ponder.init.PonderCompat;
 import com.github.ysbbbbbb.kaleidoscopetavern.init.ModBlocks;
-import com.github.ysbbbbbb.kaleidoscopetavern.init.ModItems;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderers;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.EntityRenderersEvent;
-import net.minecraftforge.client.event.RegisterColorHandlersEvent;
-import net.minecraftforge.client.event.RegisterGuiOverlaysEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
+import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 
-import static net.minecraftforge.client.gui.overlay.VanillaGuiOverlay.CROSSHAIR;
-
-@Mod.EventBusSubscriber(bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT, modid = KaleidoscopeTavern.MOD_ID)
+@EventBusSubscriber(value = Dist.CLIENT, modid = KaleidoscopeTavern.MOD_ID)
 public class ClientSetupEvent {
     @SubscribeEvent
     public static void onClientSetup(FMLClientSetupEvent event) {
         // 其他模组兼容
-        PonderCompat.init();
-
-        // 触发类加载
-        ShakerAnimation.trigger();
+        com.github.ysbbbbbb.kaleidoscopetavern.compat.ponder.init.PonderCompat.init();
     }
 
     @SubscribeEvent
@@ -48,18 +44,23 @@ public class ClientSetupEvent {
     }
 
     @SubscribeEvent
-    public static void onRegisterGuiOverlays(RegisterGuiOverlaysEvent event) {
-        event.registerAbove(CROSSHAIR.id(), "shaker_overlay", new ShakerOverlay());
+    public static void onRegisterClientExtensions(RegisterClientExtensionsEvent event) {
+        event.registerItem(new ShakerAnimation.ShakerExtensions(), ModItems.SHAKER);
     }
 
     @SubscribeEvent
-    public static void registerBlockColors(RegisterColorHandlersEvent.Block event) {
-        event.register(new SignatureCocktailColor.Block(), ModBlocks.SIGNATURE_COCKTAIL.get());
-        event.register(new PotionBottleColor(), ModBlocks.POTION_BOTTLE.get());
+    public static void onRegisterGuiOverlays(RegisterGuiLayersEvent event) {
+        event.registerAbove(CROSSHAIR, KaleidoscopeTavern.modLoc("shaker_overlay"), new ShakerOverlay());
     }
 
     @SubscribeEvent
-    public static void registerItemColors(RegisterColorHandlersEvent.Item event) {
-        event.register(new SignatureCocktailColor.Item(), ModItems.SIGNATURE_COCKTAIL.get());
+    public static void registerBlockColors(RegisterColorHandlersEvent.BlockTintSources event) {
+        event.register(java.util.List.of(new SignatureCocktailColor.Block()), ModBlocks.SIGNATURE_COCKTAIL.get());
+        event.register(java.util.List.of(new PotionBottleColor()), ModBlocks.POTION_BOTTLE.get());
+    }
+
+    @SubscribeEvent
+    public static void registerItemColors(RegisterColorHandlersEvent.ItemTintSources event) {
+        event.register(KaleidoscopeTavern.modLoc("signature_cocktail"), SignatureCocktailColor.Item.CODEC);
     }
 }

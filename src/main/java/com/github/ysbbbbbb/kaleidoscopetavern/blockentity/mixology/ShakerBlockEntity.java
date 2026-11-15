@@ -1,12 +1,13 @@
 package com.github.ysbbbbbb.kaleidoscopetavern.blockentity.mixology;
 
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import com.github.ysbbbbbb.kaleidoscopetavern.api.blockentity.IShaker;
 import com.github.ysbbbbbb.kaleidoscopetavern.blockentity.BaseBlockEntity;
 import com.github.ysbbbbbb.kaleidoscopetavern.init.ModBlocks;
 import com.github.ysbbbbbb.kaleidoscopetavern.item.BottleBlockItem;
 import com.github.ysbbbbbb.kaleidoscopetavern.item.IHasContainer;
 import net.minecraft.core.BlockPos;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
@@ -19,8 +20,8 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.PotionItem;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.items.ItemHandlerHelper;
-import net.minecraftforge.items.ItemStackHandler;
+import net.neoforged.neoforge.items.ItemHandlerHelper;
+import net.neoforged.neoforge.items.ItemStackHandler;
 import org.jetbrains.annotations.Nullable;
 
 public class ShakerBlockEntity extends BaseBlockEntity implements IShaker {
@@ -47,7 +48,7 @@ public class ShakerBlockEntity extends BaseBlockEntity implements IShaker {
 
         // 如果是酒，需要首先检查品质，必须是优质以上
         if (!BottleBlockItem.isValidForShaker(stack)) {
-            if (user instanceof Player player && !player.level().isClientSide) {
+            if (user instanceof Player player && !player.level().isClientSide()) {
                 player.sendSystemMessage(Component.translatable("message.kaleidoscope_tavern.shaker.brew_level_too_low"));
             }
             return false;
@@ -117,17 +118,17 @@ public class ShakerBlockEntity extends BaseBlockEntity implements IShaker {
     }
 
     @Override
-    protected void saveAdditional(CompoundTag tag) {
-        super.saveAdditional(tag);
-        tag.put("Storage", storage.serializeNBT());
-        tag.put("result", result.serializeNBT());
+    protected void saveAdditional(ValueOutput output) {
+        super.saveAdditional(output);
+        this.storage.serialize(output.child("Storage"));
+        output.store("result", ItemStack.OPTIONAL_CODEC, this.result);
     }
 
     @Override
-    public void load(CompoundTag tag) {
-        super.load(tag);
-        this.storage.deserializeNBT(tag.getCompound("Storage"));
-        this.result.deserializeNBT(tag.getCompound("result"));
+    protected void loadAdditional(ValueInput input) {
+        super.loadAdditional(input);
+        this.storage.deserialize(input.childOrEmpty("Storage"));
+        this.result = input.read("result", ItemStack.OPTIONAL_CODEC).orElse(ItemStack.EMPTY);
     }
 
     public ItemStackHandler getStorage() {

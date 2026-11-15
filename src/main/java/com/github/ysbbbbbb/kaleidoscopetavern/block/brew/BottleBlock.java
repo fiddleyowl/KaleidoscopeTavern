@@ -1,16 +1,21 @@
 package com.github.ysbbbbbb.kaleidoscopetavern.block.brew;
 
+import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.InteractionHand;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.LevelAccessor;
+import net.minecraft.world.level.LevelReader;
+import net.minecraft.world.level.ScheduledTickAccess;
 import net.minecraft.world.level.block.*;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
@@ -22,13 +27,13 @@ import net.minecraft.world.level.material.PushReaction;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
-import net.minecraftforge.items.ItemHandlerHelper;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
 
 @SuppressWarnings("deprecation")
 public class BottleBlock extends HorizontalDirectionalBlock implements SimpleWaterloggedBlock {
+    public static final MapCodec<BottleBlock> CODEC = simpleCodec(BottleBlock::new);
     public static final BooleanProperty WATERLOGGED = BlockStateProperties.WATERLOGGED;
     public static final VoxelShape SHAPE = Block.box(5, 0, 5, 11, 14, 11);
     public static final VoxelShape SIMPLE_BOTTLE_SHAPE = Block.box(5, 0, 5, 11, 10, 11);
@@ -49,56 +54,52 @@ public class BottleBlock extends HorizontalDirectionalBlock implements SimpleWat
                 .setValue(WATERLOGGED, false));
     }
 
-    public BottleBlock() {
+    public BottleBlock(Identifier id, boolean irregular) {
         this(Properties.of()
+                .setId(ResourceKey.create(Registries.BLOCK, id))
                 .noOcclusion()
                 .instabreak()
                 .pushReaction(PushReaction.DESTROY)
                 .sound(SoundType.GLASS));
     }
 
-    public BottleBlock(VoxelShape shape) {
-        this();
+    public BottleBlock(Identifier id) {
+        this(id, false);
+    }
+
+    public BottleBlock(Identifier id, VoxelShape shape) {
+        this(id);
         this.shape = shape;
     }
 
-    @Deprecated(forRemoval = true)
-    public BottleBlock(Properties properties, boolean irregular) {
-        this(properties);
-    }
-
-    @Deprecated(forRemoval = true)
-    public BottleBlock(boolean irregular) {
-        this();
-    }
-
-    public static BottleBlock simpleBottle() {
-        return new BottleBlock(SIMPLE_BOTTLE_SHAPE);
+    public static BottleBlock simpleBottle(Identifier id) {
+        return new BottleBlock(id, SIMPLE_BOTTLE_SHAPE);
     }
 
     @Override
-    public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player,
-                                 InteractionHand hand, BlockHitResult hitResult) {
-        // 如果是空手，那么可以尝试取回
-        if (player.getItemInHand(hand).isEmpty()) {
-            if (level instanceof ServerLevel serverLevel) {
-                getDrops(state, serverLevel, pos, level.getBlockEntity(pos))
-                        .forEach(stack -> ItemHandlerHelper.giveItemToPlayer(player, stack));
-                level.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_SUPPRESS_DROPS | Block.UPDATE_ALL);
-                level.playSound(null, pos, SoundType.STONE.getPlaceSound(), player.getSoundSource(), 1.0F, 1.0F);
-            }
+    public InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
+        if (!player.mayBuild()) {
             return InteractionResult.SUCCESS;
         }
-        return InteractionResult.PASS;
+
+        // 如果是空手，那么可以尝试取回
+        if (level instanceof ServerLevel serverLevel) {
+            getDrops(state, serverLevel, pos, level.getBlockEntity(pos))
+                    .forEach(stack -> player.getInventory().placeItemBackInInventory(stack));
+            level.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_SUPPRESS_DROPS | Block.UPDATE_ALL);
+            level.playSound(null, pos, SoundType.STONE.getPlaceSound(), player.getSoundSource(), 1.0F, 1.0F);
+        }
+        return InteractionResult.SUCCESS;
     }
 
     @Override
-    public BlockState updateShape(BlockState state, Direction direction, BlockState neighborState,
-                                  LevelAccessor level, BlockPos pos, BlockPos neighborPos) {
+    public BlockState updateShape(BlockState state, LevelReader level, ScheduledTickAccess ticks,
+                                  BlockPos pos, Direction direction, BlockPos neighborPos,
+                                  BlockState neighborState, RandomSource random) {
         if (state.getValue(WATERLOGGED)) {
-            level.scheduleTick(pos, Fluids.WATER, Fluids.WATER.getTickDelay(level));
+            ticks.scheduleTick(pos, Fluids.WATER, Fluids.WATER.getTickDelay(level));
         }
-        return super.updateShape(state, direction, neighborState, level, pos, neighborPos);
+        return super.updateShape(state, level, ticks, pos, direction, neighborPos, neighborState, random);
     }
 
     @Override
@@ -112,9 +113,9 @@ public class BottleBlock extends HorizontalDirectionalBlock implements SimpleWat
 
     @Override
     public void onProjectileHit(Level level, BlockState state, BlockHitResult hit, Projectile projectile) {
-        if (!level.isClientSide) {
+        if (level instanceof ServerLevel serverLevel) {
             BlockPos pos = hit.getBlockPos();
-            if (projectile.mayInteract(level, pos)) {
+            if (projectile.mayInteract(serverLevel, pos)) {
                 level.removeBlock(pos, false);
                 // 播放玻璃的粒子效果
                 int id = Block.getId(Blocks.GLASS.defaultBlockState());
@@ -150,5 +151,10 @@ public class BottleBlock extends HorizontalDirectionalBlock implements SimpleWat
     @Deprecated(forRemoval = true)
     public boolean irregular() {
         return this.irregular;
+    }
+
+    @Override
+    protected MapCodec<? extends HorizontalDirectionalBlock> codec() {
+        return CODEC;
     }
 }

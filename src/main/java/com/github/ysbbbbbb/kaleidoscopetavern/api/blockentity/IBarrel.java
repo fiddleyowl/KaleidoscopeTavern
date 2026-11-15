@@ -1,12 +1,14 @@
 package com.github.ysbbbbbb.kaleidoscopetavern.api.blockentity;
 
+import com.github.ysbbbbbb.kaleidoscopetavern.crafting.recipe.BarrelRecipe;
 import net.minecraft.core.BlockPos;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
-import net.minecraftforge.fluids.capability.templates.FluidTank;
-import net.minecraftforge.items.ItemStackHandler;
+import net.neoforged.neoforge.transfer.access.ItemAccess;
+import net.neoforged.neoforge.transfer.fluid.FluidStacksResourceHandler;
+import net.neoforged.neoforge.transfer.item.ItemStacksResourceHandler;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -93,7 +95,7 @@ public interface IBarrel {
      * - 物品槽不为空
      * - 流体槽已满
      */
-    boolean addFluid(@NotNull LivingEntity user, ItemStack stack);
+    boolean addFluid(@NotNull LivingEntity user, ItemAccess stack);
 
     /**
      * 移除流体
@@ -107,7 +109,7 @@ public interface IBarrel {
      * - 物品槽不为空
      * - 流体槽已空
      */
-    boolean removeFluid(@NotNull LivingEntity user, ItemStack stack);
+    boolean removeFluid(@NotNull LivingEntity user, ItemAccess stack);
 
     /**
      * 检查酒桶是否正在酿造中
@@ -146,14 +148,14 @@ public interface IBarrel {
      *
      * @return 酒桶的物品栏，包含 {@value MAX_ITEM_SLOTS} 个槽位。
      */
-    ItemStackHandler getIngredient();
+    ItemStacksResourceHandler getIngredient();
 
     /**
      * 获取酒桶的液体槽
      *
      * @return 酒桶的液体槽，容量为 {@value MAX_FLUID_AMOUNT} 毫桶。
      */
-    FluidTank getFluid();
+    FluidStacksResourceHandler getFluid();
 
     /**
      * 设置酒桶的开盖状态
@@ -191,12 +193,12 @@ public interface IBarrel {
      *
      * @return 酒桶的输出槽，包含 1 个槽位，用于存放酿造完成后的成品。
      */
-    ItemStackHandler getOutput();
+    ItemStacksResourceHandler getOutput();
 
     /**
      * 获取当前酒桶缓存的配方 ID，主要用于获取酿造时间和容器
      *
      * @return 当没有任何配方时，返回 null
      */
-    @Nullable ResourceLocation getRecipeId();
+    @Nullable ResourceKey<BarrelRecipe> getRecipeId();
 }

@@ -2,10 +2,12 @@ package com.github.ysbbbbbb.kaleidoscopetavern.blockentity.brew;
 
 import com.github.ysbbbbbb.kaleidoscopetavern.blockentity.BaseBlockEntity;
 import com.github.ysbbbbbb.kaleidoscopetavern.init.ModBlocks;
+import com.mojang.serialization.Codec;
 import net.minecraft.core.BlockPos;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 
 public class BarCabinetBlockEntity extends BaseBlockEntity {
     /**
@@ -26,37 +28,19 @@ public class BarCabinetBlockEntity extends BaseBlockEntity {
     }
 
     @Override
-    public void load(CompoundTag tag) {
-        super.load(tag);
-
-        if (tag.contains("left_item")) {
-            this.leftItem = ItemStack.of(tag.getCompound("left_item"));
-        } else {
-            this.leftItem = ItemStack.EMPTY;
-        }
-
-        if (tag.contains("right_item")) {
-            this.rightItem = ItemStack.of(tag.getCompound("right_item"));
-        } else {
-            this.rightItem = ItemStack.EMPTY;
-        }
-
-        this.isSingle = tag.getBoolean("is_single");
+    protected void loadAdditional(ValueInput input) {
+        super.loadAdditional(input);
+        this.leftItem = input.read("left_item", ItemStack.OPTIONAL_CODEC).orElse(ItemStack.EMPTY);
+        this.rightItem = input.read("right_item", ItemStack.OPTIONAL_CODEC).orElse(ItemStack.EMPTY);
+        this.isSingle = input.read("is_single", Codec.BOOL).orElse(false);
     }
 
     @Override
-    protected void saveAdditional(CompoundTag tag) {
-        super.saveAdditional(tag);
-
-        if (!this.leftItem.isEmpty()) {
-            tag.put("left_item", this.leftItem.save(new CompoundTag()));
-        }
-
-        if (!this.rightItem.isEmpty()) {
-            tag.put("right_item", this.rightItem.save(new CompoundTag()));
-        }
-
-        tag.putBoolean("is_single", this.isSingle);
+    protected void saveAdditional(ValueOutput output) {
+        super.saveAdditional(output);
+        output.store("left_item", ItemStack.OPTIONAL_CODEC, this.leftItem);
+        output.store("right_item", ItemStack.OPTIONAL_CODEC, this.rightItem);
+        output.store("is_single", Codec.BOOL, this.isSingle);
     }
 
     public ItemStack getLeftItem() {

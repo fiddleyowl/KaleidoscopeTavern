@@ -1,16 +1,18 @@
 package com.github.ysbbbbbb.kaleidoscopetavern.effect;
 
+import com.github.ysbbbbbb.kaleidoscopetavern.KaleidoscopeTavern;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
-import net.minecraftforge.common.ForgeMod;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 
 public class HighHeelsEffect extends BaseEffect {
     public HighHeelsEffect(int color) {
         super(color);
         this.addAttributeModifier(
-                ForgeMod.STEP_HEIGHT_ADDITION.get(),
-                "8e98b363-4638-49f0-948c-58be80d59c66",
+                Attributes.STEP_HEIGHT,
+                Identifier.fromNamespaceAndPath(KaleidoscopeTavern.MOD_ID, "high_heels_step_height"),
                 0.5,
-                AttributeModifier.Operation.ADDITION
+                AttributeModifier.Operation.ADD_VALUE
         );
     }
 }

@@ -6,16 +6,15 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
-import net.minecraftforge.eventbus.api.Cancelable;
-import net.minecraftforge.eventbus.api.Event;
+import net.neoforged.bus.api.Event;
+import net.neoforged.bus.api.ICancellableEvent;
 
 /**
  * 种植葡萄事件，在玩家使用葡萄藤种植葡萄时触发，主要用于不同品种普通的种植逻辑
  * <p>
  * 该事件可取消；在多个监听器监听此事件时，取消后不再触发后续逻辑
  */
-@Cancelable
-public final class PlantGrapeEvent extends Event {
+public final class PlantGrapeEvent extends Event implements ICancellableEvent {
     private final BlockState state;
     private final Level level;
     private final BlockPos pos;

@@ -1,8 +1,13 @@
 package com.github.ysbbbbbb.kaleidoscopetavern.entity;
 
+import com.github.ysbbbbbb.kaleidoscopetavern.KaleidoscopeTavern;
 import com.github.ysbbbbbb.kaleidoscopetavern.init.ModItems;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -21,22 +26,25 @@ public class ThrownMolotovEntity extends ThrowableProjectile {
             .sized(0.25F, 0.25F)
             .clientTrackingRange(4)
             .updateInterval(10)
-            .build("thrown_molotov");
+            .build(ResourceKey.create(Registries.ENTITY_TYPE,
+                    Identifier.fromNamespaceAndPath(KaleidoscopeTavern.MOD_ID, "thrown_molotov")));
 
     public ThrownMolotovEntity(EntityType<? extends ThrowableProjectile> type, Level level) {
         super(type, level);
-    }
-
-    public ThrownMolotovEntity(Level level, LivingEntity shooter) {
-        super(TYPE, shooter, level);
     }
 
     public ThrownMolotovEntity(Level level, double pX, double pY, double pZ) {
         super(TYPE, pX, pY, pZ, level);
     }
 
+    public ThrownMolotovEntity(Level level, LivingEntity owner) {
+        super(TYPE, level);
+        this.setPos(owner.getX(), owner.getEyeY() - 0.1F, owner.getZ());
+        this.setOwner(owner);
+    }
+
     @Override
-    protected void defineSynchedData() {
+    protected void defineSynchedData(SynchedEntityData.Builder builder) {
     }
 
     public ItemStack getItem() {
@@ -50,7 +58,7 @@ public class ThrownMolotovEntity extends ThrowableProjectile {
         // 默认半径 3，范围内必定点燃；边缘外延 2 格范围内随机点燃，距离越远概率越低
         int radius = 3;
 
-        if (!this.level().isClientSide) {
+        if (!this.level().isClientSide()) {
             // 在周围放火，圆形范围 + 边缘随机
             BlockPos center = this.blockPosition();
             var random = this.level().getRandom();

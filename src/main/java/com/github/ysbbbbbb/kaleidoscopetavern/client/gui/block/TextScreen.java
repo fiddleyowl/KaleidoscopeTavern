@@ -4,11 +4,10 @@ import com.github.ysbbbbbb.kaleidoscopetavern.blockentity.deco.TextBlockEntity;
 import com.github.ysbbbbbb.kaleidoscopetavern.network.NetworkHandler;
 import com.github.ysbbbbbb.kaleidoscopetavern.network.message.TextUpdateC2SMessage;
 import com.github.ysbbbbbb.kaleidoscopetavern.util.TextAlignment;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.MultiLineEditBox;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 
@@ -35,10 +34,11 @@ public class TextScreen extends Screen {
         int boxWidth = 256;
         int maxTextLength = this.blockEntity.getMaxTextLength();
 
-        this.customSetting = this.addRenderableWidget(new MultiLineEditBox(font,
-                posX, posY, boxWidth, 120,
-                Component.translatable("gui.kaleidoscope_tavern.text.edit.placeholder"),
-                Component.literal("Custom Setting Box")));
+        this.customSetting = this.addRenderableWidget(MultiLineEditBox.builder()
+                .setX(posX).setY(posY)
+                .setPlaceholder(Component.translatable("gui.kaleidoscope_tavern.text.edit.placeholder"))
+                .build(font, boxWidth, 120, Component.literal("Custom Setting Box"))
+        );
         this.customSetting.setValue(text);
         this.customSetting.setCharacterLimit(maxTextLength);
         this.customSetting.setValueListener(s -> text = s);
@@ -94,20 +94,9 @@ public class TextScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        super.renderBackground(graphics);
-        super.render(graphics, mouseX, mouseY, partialTick);
-    }
-
-    @Override
-    public void tick() {
-        this.customSetting.tick();
-    }
-
-    @Override
-    public void resize(Minecraft mc, int pWidth, int pHeight) {
+    public void resize(int width, int height) {
         String customSettingValue = this.customSetting.getValue();
-        super.resize(mc, pWidth, pHeight);
+        super.resize(width, height);
         this.customSetting.setValue(customSettingValue);
     }
 
@@ -117,7 +106,7 @@ public class TextScreen extends Screen {
     }
 
     @Override
-    public boolean mouseReleased(double x, double y, int button) {
-        return super.mouseReleased(x, y, button) || this.customSetting.mouseReleased(x, y, button);
+    public boolean mouseReleased(MouseButtonEvent event) {
+        return super.mouseReleased(event) || this.customSetting.mouseReleased(event);
     }
 }

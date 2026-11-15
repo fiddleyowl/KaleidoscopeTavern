@@ -133,5 +133,6 @@
   "jade.plugin_kaleidoscope_tavern.barrel.next_level": "次：%s",
   "jade.plugin_kaleidoscope_tavern.barrel.max_level": "最高品質",
   "emi.category.kaleidoscope_tavern.barrel": "樽",
-  "emi.category.kaleidoscope_tavern.pressing_tub": "果物桶"
+  "emi.category.kaleidoscope_tavern.pressing_tub": "果物桶",
+  "config.jade.plugin_kaleidoscope_tavern.potion_bottle": "Potion bottle icon"
 }
