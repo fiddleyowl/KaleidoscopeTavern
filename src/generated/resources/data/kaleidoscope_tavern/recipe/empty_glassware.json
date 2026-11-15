@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "G": "#c:glass_panes"
+  },
+  "pattern": [
+    "G G",
+    " G "
+  ],
+  "result": {
+    "id": "kaleidoscope_tavern:empty_glassware"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "B": "minecraft:glass_bottle",
+    "C": "minecraft:spore_blossom",
+    "F": "minecraft:feather"
+  },
+  "pattern": [
+    "F",
+    "C",
+    "B"
+  ],
+  "result": {
+    "id": "kaleidoscope_tavern:spore_incense"
+  }
+}

@@ -65,6 +65,6 @@
 
 - `run/` is ignored local runtime state. It may contain KubeJS scripts/logs and per-run game directories; do not commit
   or rely on it as source.
-- CI release workflow `.github/workflows/gradle-publish-26.1.2.yml` builds on pushes to `main` touching `src/main/**`
-  and publishes `build/libs/*.jar` as a prerelease.
+- CI workflow `.github/workflows/gradle-publish-26.1.2.yml` builds on pushes to `26.1.2-new` touching `src/main/**`.
+  Manual `workflow_dispatch` runs also publish `build/libs/*.jar` as a prerelease.
 - `.gitattributes` forces `*.json` to CRLF; avoid normalizing JSON line endings casually.

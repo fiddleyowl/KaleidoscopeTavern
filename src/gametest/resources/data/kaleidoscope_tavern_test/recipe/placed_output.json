@@ -1,0 +1,8 @@
+{
+  "type": "kaleidoscope_tavern:barrel",
+  "fluid": "minecraft:water",
+  "carrier": "minecraft:dirt",
+  "result": {
+    "id": "minecraft:diamond"
+  }
+}

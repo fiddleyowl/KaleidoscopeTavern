@@ -1,0 +1,18 @@
+Kaleidoscope Tavern — unofficial NeoForge 26.1.2 port
+
+Original project: https://github.com/KaleidoscopeMods/KaleidoscopeTavern
+Original authors: ysbbbbbb, tartaric_acid and the upstream contributors.
+All original copyright notices and contributor credits are retained.
+
+Content baseline: main c4ec1880bd44cf3139d3ba744ab30bb379cf1416 (mod 1.2.0).
+NeoForge reference: 1.21.1 a1afba34981a00e89d57130d3dc8f1e64f1820a2.
+Target API reference: 26.1.2 9b8f165a4641e738e694641dd81240a0206573e1.
+
+Port changes include Java 25 / NeoForge 26.1.2 APIs, registry-backed drink data,
+item components and item definitions, extracted render states, particles,
+recipe-viewer and optional-mod integrations, and development regression tests.
+This is an unofficial adaptation and is not endorsed by the upstream authors.
+
+Code license: BSD-3-Clause (LICENSE-CODE).
+Asset license: CC BY-NC-SA 4.0 (LICENSE-ASSETS).
+Third-party dependencies are separate installations and retain their licenses.
