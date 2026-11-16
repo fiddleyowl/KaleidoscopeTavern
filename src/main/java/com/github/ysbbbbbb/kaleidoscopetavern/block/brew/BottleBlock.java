@@ -78,6 +78,10 @@ public class BottleBlock extends HorizontalDirectionalBlock implements SimpleWat
 
     @Override
     public InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
+        // 新版会在持物交互未处理时回退到这里；取回酒瓶仍要求主手为空。
+        if (!player.getMainHandItem().isEmpty()) {
+            return InteractionResult.PASS;
+        }
         if (!player.mayBuild()) {
             return InteractionResult.SUCCESS;
         }

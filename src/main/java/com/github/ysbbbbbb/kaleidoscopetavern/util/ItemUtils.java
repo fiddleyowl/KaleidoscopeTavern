@@ -24,6 +24,8 @@ public class ItemUtils {
             entity.playSound(SoundEvents.ITEM_PICKUP, 0.2F, ((random.nextFloat() - random.nextFloat()) * 0.7F + 1.0F) * 2.0F);
         } else if (entity instanceof Player player) {
             player.getInventory().add(preferredSlot, stack);
+            // add 可能只装入部分物品，剩余部分应掉落，不能丢弃。
+            player.getInventory().placeItemBackInInventory(stack);
         } else {
             // 否则直接在实体所处位置生成物品
             ItemEntity dropItem = null;

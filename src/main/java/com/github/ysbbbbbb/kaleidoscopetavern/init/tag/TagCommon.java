@@ -8,6 +8,7 @@ import net.minecraft.world.level.block.Block;
 
 public interface TagCommon {
     TagKey<Item> FRUITS_GRAPES = itemTag("fruits/grapes");
+    TagKey<Item> LEGACY_FRUITS_GRAPES = TagKey.create(Registries.ITEM, Identifier.parse("forge:fruits/grapes"));
 
     // 均衡饮食模组
     TagKey<Item> FRUITS = dietTag("fruits");

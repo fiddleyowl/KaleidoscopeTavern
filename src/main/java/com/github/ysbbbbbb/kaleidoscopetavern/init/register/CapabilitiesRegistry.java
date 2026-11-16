@@ -16,7 +16,7 @@ public class CapabilitiesRegistry {
     public static void registerGenericItemHandlers(RegisterCapabilitiesEvent event) {
         event.registerBlockEntity(Capabilities.Item.BLOCK, ModBlocks.PRESSING_TUB_BE.get(), (b, v) -> {
             // 仅能从侧面输入
-            if (v == null || v.getAxis() == Direction.Axis.Y) {
+            if (v != null && v.getAxis() == Direction.Axis.Y) {
                 return null;
             }
             return b.getItems();

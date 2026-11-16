@@ -136,6 +136,7 @@ public class TagItem extends ItemTagsProvider {
         tag(TagCommon.FRUITS_GRAPES).add(
                 ModItems.GRAPE.get()
         );
+        tag(TagCommon.LEGACY_FRUITS_GRAPES).addTag(TagCommon.FRUITS_GRAPES);
 
         tag(TagCommon.FRUITS).add(
                 ModItems.GRAPE.get(),

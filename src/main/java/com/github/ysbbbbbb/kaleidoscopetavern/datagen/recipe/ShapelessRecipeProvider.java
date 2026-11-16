@@ -116,12 +116,13 @@ public class ShapelessRecipeProvider extends ModRecipeProvider {
                 String resultName = getId(result).getPath();
                 result.getTransformItems().forEach(transform -> {
                     String transformName = getId(transform).getPath();
-                    Identifier recipeId = KaleidoscopeTavern.modLoc("%s_from_%s".formatted(resultName, transformName));
-                    this.shapeless(RecipeCategory.DECORATIONS, result)
+                    String originalName = transform == Items.SHORT_GRASS ? "grass" : transformName;
+                    Identifier recipeId = KaleidoscopeTavern.modLoc("%s_from_%s".formatted(resultName, originalName));
+                    var builder = this.shapeless(RecipeCategory.DECORATIONS, result)
                             .requires(ModItems.BASE_SANDWICH_BOARD.get())
                             .requires(transform)
-                            .unlockedBy("has_base_sandwich_board", has(ModItems.BASE_SANDWICH_BOARD.get()))
-                            .save(this.output, recipeId.toString());
+                            .unlockedBy("has_base_sandwich_board", has(ModItems.BASE_SANDWICH_BOARD.get()));
+                    builder.save(this.output, recipeId.toString());
                 });
             }
         });

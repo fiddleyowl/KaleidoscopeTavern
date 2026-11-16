@@ -2,11 +2,21 @@ package com.github.ysbbbbbb.kaleidoscopetavern.gametest;
 
 import com.github.ysbbbbbb.kaleidoscopetavern.KaleidoscopeTavern;
 import com.github.ysbbbbbb.kaleidoscopetavern.init.ModItems;
+import com.github.ysbbbbbb.kaleidoscopetavern.init.ModEffects;
+import com.github.ysbbbbbb.kaleidoscopetavern.init.ModEntities;
+import com.github.ysbbbbbb.kaleidoscopetavern.init.ModFluids;
+import com.github.ysbbbbbb.kaleidoscopetavern.init.ModCreativeTabs;
+import com.github.ysbbbbbb.kaleidoscopetavern.item.BottleBlockItem;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.client.renderer.item.ItemStackRenderState;
+import net.minecraft.client.resources.language.I18n;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.contents.TranslatableContents;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.TooltipFlag;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -68,6 +78,15 @@ public final class ClientSmokeTest {
         if (net.neoforged.fml.ModList.get().isLoaded("roughlyenoughitems") && !ReiSmokeObserver.ready()) return;
         int count = 0;
         for (var item : ModItems.ITEMS.getEntries()) {
+            String key = item.get().getDescriptionId();
+            if (!net.minecraft.client.resources.language.I18n.exists(key)
+                    || !new ItemStack(item.get()).getHoverName().getString().equals(net.minecraft.client.resources.language.I18n.get(key))) {
+                throw new IllegalStateException("Unresolved item display name: " + item.getId() + " / " + key);
+            }
+            checkTooltip(client, new ItemStack(item.get()));
+            if (item.get() instanceof BottleBlockItem bottle) {
+                for (int brewLevel = 1; brewLevel <= 6; brewLevel++) checkTooltip(client, bottle.getFilledStack(brewLevel));
+            }
             for (var context : ItemDisplayContext.values()) {
                 if (context == ItemDisplayContext.NONE) continue;
                 var state = new ItemStackRenderState();
@@ -77,8 +96,32 @@ public final class ClientSmokeTest {
             }
             count++;
         }
+        ModEffects.EFFECTS.getEntries().forEach(entry -> assertTranslated(Component.translatable(entry.get().getDescriptionId()), entry.getId().toString()));
+        ModEntities.ENTITY_TYPES.getEntries().forEach(entry -> assertTranslated(Component.translatable(entry.get().getDescriptionId()), entry.getId().toString()));
+        ModFluids.FLUID_TYPES.getEntries().forEach(entry -> assertTranslated(Component.translatable(entry.get().getDescriptionId()), entry.getId().toString()));
+        ModCreativeTabs.TABS.getEntries().forEach(entry -> assertTranslated(entry.get().getDisplayName(), entry.getId().toString()));
         complete = true;
+        KaleidoscopeTavern.LOGGER.info("CLIENT_TRANSLATIONS_PASS: item tooltips, brew levels 1-6, effects, entities, fluids and creative tabs");
         KaleidoscopeTavern.LOGGER.info("CLIENT_SMOKE_PASS: {} registered items resolved in every display context", count);
         client.stop();
+    }
+
+    private static void checkTooltip(Minecraft client, ItemStack stack) {
+        for (Component line : stack.getTooltipLines(Item.TooltipContext.of(client.level), client.player, TooltipFlag.NORMAL)) {
+            assertTranslated(line, stack.toString());
+        }
+    }
+
+    static void assertTranslated(Component component, String context) {
+        if (component.getContents() instanceof TranslatableContents translation) {
+            String key = translation.getKey();
+            if (key.contains(KaleidoscopeTavern.MOD_ID) && !I18n.exists(key)) {
+                throw new IllegalStateException("Unresolved translation: " + context + " / " + key);
+            }
+            for (Object argument : translation.getArgs()) {
+                if (argument instanceof Component nested) assertTranslated(nested, context);
+            }
+        }
+        component.getSiblings().forEach(sibling -> assertTranslated(sibling, context));
     }
 }

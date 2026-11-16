@@ -20,6 +20,8 @@ if (!(recipeViewer in ['jei', 'rei', 'none'])) throw new GradleException('recipe
 
 sourceSets {
     gameTest {
+        java.setSrcDirs(['src/gametest/java'])
+        resources.setSrcDirs(['src/gametest/resources'])
         compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
         runtimeClasspath += sourceSets.main.output + sourceSets.main.runtimeClasspath
     }

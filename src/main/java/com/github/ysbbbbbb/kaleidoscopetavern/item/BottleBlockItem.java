@@ -3,6 +3,7 @@ package com.github.ysbbbbbb.kaleidoscopetavern.item;
 import com.github.ysbbbbbb.kaleidoscopetavern.api.blockentity.IBarrel;
 import com.github.ysbbbbbb.kaleidoscopetavern.datamap.DrinkEffectResolver;
 import com.github.ysbbbbbb.kaleidoscopetavern.init.ModDataComponents;
+import com.github.ysbbbbbb.kaleidoscopetavern.util.ColorUtils;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
@@ -56,7 +57,7 @@ public class BottleBlockItem extends BlockItem {
      * 判断酒瓶物品是否满足调酒品质要求（brewLevel >= {@link #MIN_BREW_LEVEL_FOR_SHAKER}）。
      * 非 BottleBlockItem 的物品直接返回 true（药水等其他原料不受此限制）。
      */
-    public static final int MIN_BREW_LEVEL_FOR_SHAKER = 3;
+    public static final int MIN_BREW_LEVEL_FOR_SHAKER = 4;
 
     public static boolean isValidForShaker(ItemStack stack) {
         if (!(stack.getItem() instanceof BottleBlockItem)) {
@@ -73,6 +74,12 @@ public class BottleBlockItem extends BlockItem {
 
     @Override
     public void appendHoverText(ItemStack stack, Item.TooltipContext context, TooltipDisplay display, Consumer<Component> builder, TooltipFlag flag) {
+        ChatFormatting applied = ColorUtils.ITEM_COLOR_CACHE.apply(stack.getItem());
+        if (applied != ChatFormatting.RESET) {
+            builder.accept(Component.translatable("color.kaleidoscope_tavern.prefix")
+                    .withStyle(ChatFormatting.GRAY)
+                    .append(Component.translatable("color.kaleidoscope_tavern.%s".formatted(applied.getName())).withStyle(applied)));
+        }
         int brewLevel = getBrewLevel(stack);
         if (0 < brewLevel) {
             Component brewLevelText = Component.translatable("message.kaleidoscope_tavern.barrel.brew_level.%d".formatted(brewLevel));

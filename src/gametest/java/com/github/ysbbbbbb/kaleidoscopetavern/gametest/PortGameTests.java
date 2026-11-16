@@ -52,12 +52,22 @@ import java.util.function.Consumer;
  */
 @EventBusSubscriber(modid = KaleidoscopeTavern.MOD_ID)
 public final class PortGameTests {
-    private static final Map<String, Consumer<GameTestHelper>> TESTS = Map.of(
-            "content_and_blockstates", PortGameTests::content,
-            "shaker_and_component_roundtrip", PortGameTests::shaker,
-            "cocktail_drinking_sound", PortGameTests::cocktailDrinkingSound,
-            "barrel_item_carrier", h -> barrel(h, false),
-            "barrel_placed_carrier", h -> barrel(h, true));
+    private static final Map<String, Consumer<GameTestHelper>> TESTS = Map.ofEntries(
+            Map.entry("content_and_blockstates", PortGameTests::content),
+            Map.entry("shaker_and_component_roundtrip", PortGameTests::shaker),
+            Map.entry("cocktail_drinking_sound", PortGameTests::cocktailDrinkingSound),
+            Map.entry("string_lights_equipment", BehaviorGameTests::stringLightsEquipment),
+            Map.entry("pressing_tub_capabilities", BehaviorGameTests::pressingTubCapabilities),
+            Map.entry("drink_containers", BehaviorGameTests::drinkContainers),
+            Map.entry("ingredient_return_overflow", BehaviorGameTests::ingredientReturnOverflow),
+            Map.entry("fuel_and_composting", BehaviorGameTests::fuelAndComposting),
+            Map.entry("network_roundtrips", NetworkGameTests::roundTrips),
+            Map.entry("shaker_timing", BehaviorGameTests::shakerTiming),
+            Map.entry("effect_attributes", BehaviorGameTests::effectAttributes),
+            Map.entry("bottle_interaction", BehaviorGameTests::bottleInteraction),
+            Map.entry("public_names_and_aliases", NamespaceGameTests::publicNames),
+            Map.entry("barrel_item_carrier", h -> barrel(h, false)),
+            Map.entry("barrel_placed_carrier", h -> barrel(h, true)));
 
     @SubscribeEvent
     public static void registerFunctions(net.neoforged.neoforge.registries.RegisterEvent event) {
