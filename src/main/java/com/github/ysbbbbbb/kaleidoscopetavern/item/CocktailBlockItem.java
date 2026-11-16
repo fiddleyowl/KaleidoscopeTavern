@@ -1,16 +1,17 @@
 package com.github.ysbbbbbb.kaleidoscopetavern.item;
 
 import net.minecraft.world.item.component.TooltipDisplay;
+import net.minecraft.world.item.component.Consumables;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import com.github.ysbbbbbb.kaleidoscopetavern.datamap.data.DrinkEffectData;
 import com.github.ysbbbbbb.kaleidoscopetavern.datamap.DrinkEffectResolver;
 import com.github.ysbbbbbb.kaleidoscopetavern.init.ModItems;
 import com.google.common.collect.Lists;
-import net.minecraft.advancements.CriteriaTriggers;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
-import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.stats.Stats;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.effect.MobEffect;
@@ -28,11 +29,12 @@ import java.util.List;
 
 public class CocktailBlockItem extends GlasswareBlockItem implements IHasContainer {
     public CocktailBlockItem(Identifier id, Block block) {
-        super(id, block);
+        this(block, new Properties().useBlockDescriptionPrefix()
+                .setId(ResourceKey.create(Registries.ITEM, id)).stacksTo(16));
     }
 
     public CocktailBlockItem(Block block, Properties properties) {
-        super(block, properties);
+        super(block, properties.component(DataComponents.CONSUMABLE, Consumables.DEFAULT_DRINK));
     }
 
     @Override
@@ -67,14 +69,8 @@ public class CocktailBlockItem extends GlasswareBlockItem implements IHasContain
 
     @Override
     public ItemStack finishUsingItem(ItemStack stack, Level level, LivingEntity entity) {
-        if (entity instanceof ServerPlayer serverPlayer) {
-            CriteriaTriggers.CONSUME_ITEM.trigger(serverPlayer, stack);
-            serverPlayer.awardStat(Stats.ITEM_USED.get(this));
-        }
         this.addDrinkEffect(stack, level, entity);
-        if (entity instanceof Player player && !player.isCreative()) {
-            stack.shrink(1);
-        }
+        super.finishUsingItem(stack, level, entity);
         return returnContainerToEntity(stack, level, entity);
     }
 

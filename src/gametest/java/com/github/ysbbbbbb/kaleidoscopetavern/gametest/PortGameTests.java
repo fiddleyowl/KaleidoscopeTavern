@@ -8,6 +8,7 @@ import com.github.ysbbbbbb.kaleidoscopetavern.crafting.container.SimpleInput;
 import com.github.ysbbbbbb.kaleidoscopetavern.datamap.DrinkEffectResolver;
 import com.github.ysbbbbbb.kaleidoscopetavern.init.*;
 import com.github.ysbbbbbb.kaleidoscopetavern.item.BottleBlockItem;
+import com.github.ysbbbbbb.kaleidoscopetavern.item.CocktailBlockItem;
 import com.github.ysbbbbbb.kaleidoscopetavern.item.ShakerItem;
 import com.github.ysbbbbbb.kaleidoscopetavern.item.SignatureCocktailBlockItem;
 import com.google.gson.JsonParser;
@@ -21,12 +22,17 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.RegistryOps;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.ProblemReporter;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.storage.TagValueInput;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -37,6 +43,8 @@ import net.neoforged.neoforge.transfer.item.ItemResource;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
+import java.util.Comparator;
+import java.util.UUID;
 import java.util.function.Consumer;
 
 /**
@@ -47,6 +55,7 @@ public final class PortGameTests {
     private static final Map<String, Consumer<GameTestHelper>> TESTS = Map.of(
             "content_and_blockstates", PortGameTests::content,
             "shaker_and_component_roundtrip", PortGameTests::shaker,
+            "cocktail_drinking_sound", PortGameTests::cocktailDrinkingSound,
             "barrel_item_carrier", h -> barrel(h, false),
             "barrel_placed_carrier", h -> barrel(h, true));
 
@@ -192,6 +201,41 @@ public final class PortGameTests {
                 item -> item.getItem().is(Items.DIAMOND));
         h.assertValueEqual(drops.size(), 1, "non-block output drops");
         h.assertTrue(!barrel.isBrewing(), "Empty barrel did not reset");
+        h.succeed();
+    }
+
+    private static void cocktailDrinkingSound(GameTestHelper h) {
+        class DrinkingPlayer extends Player {
+            int drinkSounds;
+
+            DrinkingPlayer() {
+                super(h.getLevel(), new com.mojang.authlib.GameProfile(UUID.randomUUID(), "drink-test"));
+            }
+
+            @Override public GameType gameMode() { return GameType.SURVIVAL; }
+            @Override public boolean isClientAuthoritative() { return false; }
+
+            @Override
+            public void playSound(SoundEvent sound, float volume, float pitch) {
+                if (sound == SoundEvents.GENERIC_DRINK.value()) drinkSounds++;
+            }
+        }
+        for (var entry : ModItems.ITEMS.getEntries().stream()
+                .sorted(Comparator.comparing(item -> item.getId().toString())).toList()) {
+            if (!(entry.get() instanceof CocktailBlockItem)) continue;
+            var player = new DrinkingPlayer();
+            player.setPos(h.absolutePos(new BlockPos(1, 1, 1)).getBottomCenter());
+            player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(entry.get()));
+            entry.get().use(h.getLevel(), player, InteractionHand.MAIN_HAND);
+            h.assertTrue(player.isUsingItem(), "Cocktail did not start drinking: " + entry.getId());
+            for (int tick = 0; tick < 31; tick++) player.tick();
+            h.assertTrue(player.drinkSounds > 0, "No sound while drinking: " + entry.getId());
+            int drinkingSounds = player.drinkSounds;
+            player.tick();
+            h.assertValueEqual(player.drinkSounds, drinkingSounds + 1, "Final drinking sound: " + entry.getId());
+            h.assertTrue(player.getMainHandItem().is(ModItems.EMPTY_GLASSWARE), "Cocktail did not return its glass: " + entry.getId());
+            h.assertTrue(!player.isUsingItem(), "Cocktail did not finish after 32 ticks: " + entry.getId());
+        }
         h.succeed();
     }
 }
